@@ -1228,18 +1228,18 @@
         const tr = document.createElement("tr");
 
         let rowHtml = `
-          <td class="cell-editable font-semibold" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'student_id', 'text')">${st.student_id}</td>
-          <td class="cell-editable text-left font-semibold" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'name', 'text')">${st.name}</td>
-          <td class="cell-editable" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'classroom', 'text')">${st.classroom}</td>
-          <td class="cell-editable" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'student_no', 'number-free')">${st.student_no}</td>
-          <td class="cell-editable" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'subject_code', 'text')">${st.subject_code}</td>
+          <td class="cell-editable font-semibold" data-student-id="${st.student_id}" data-key="student_id" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'student_id', 'text')">${st.student_id}</td>
+          <td class="cell-editable text-left font-semibold" data-student-id="${st.student_id}" data-key="name" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'name', 'text')">${st.name}</td>
+          <td class="cell-editable" data-student-id="${st.student_id}" data-key="classroom" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'classroom', 'text')">${st.classroom}</td>
+          <td class="cell-editable" data-student-id="${st.student_id}" data-key="student_no" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'student_no', 'number-free')">${st.student_no}</td>
+          <td class="cell-editable" data-student-id="${st.student_id}" data-key="subject_code" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'subject_code', 'text')">${st.subject_code}</td>
         `;
 
         // Dynamic collect score columns
         scoreHeaders.forEach(sh => {
           const max = parseMaxScore(sh);
           rowHtml += `
-            <td class="cell-editable" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', '${sh}', ${max})">
+            <td class="cell-editable" data-student-id="${st.student_id}" data-key="${sh}" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', '${sh}', ${max})">
               ${st[sh] !== "" ? st[sh] : "-"}
             </td>
           `;
@@ -1247,15 +1247,15 @@
 
         // Midterm & Final score columns
         rowHtml += `
-          <td class="cell-editable" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'midterm_score', 20)">
+          <td class="cell-editable" data-student-id="${st.student_id}" data-key="midterm_score" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'midterm_score', 20)">
             ${st.midterm_score !== "" ? st.midterm_score : "-"}
           </td>
-          <td class="cell-editable" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'final_score', 20)">
+          <td class="cell-editable" data-student-id="${st.student_id}" data-key="final_score" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'final_score', 20)">
             ${st.final_score !== "" ? st.final_score : "-"}
           </td>
           <td class="font-bold text-primary">${calc.totalScore}</td>
           <td class="font-bold text-success">${calc.grade}</td>
-          <td class="cell-editable text-left small" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'comment', 'text')">
+          <td class="cell-editable text-left small" data-student-id="${st.student_id}" data-key="comment" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'comment', 'text')">
             ${st.comment || "-"}
           </td>
         `;
@@ -1268,45 +1268,72 @@
     // Editable cell event handlers
     let activeEditingCell = null;
 
-    function navigateAndEdit(currentCell, direction) {
-      let targetCell = null;
-      const cellIndex = currentCell.cellIndex;
-      const row = currentCell.parentElement;
-      
-      if (direction === "down") {
-        const nextRow = row.nextElementSibling;
-        if (nextRow && nextRow.cells[cellIndex]) {
-          targetCell = nextRow.cells[cellIndex];
-        }
-      } else if (direction === "up") {
-        const prevRow = row.previousElementSibling;
-        if (prevRow && prevRow.cells[cellIndex]) {
-          targetCell = prevRow.cells[cellIndex];
-        }
-      } else if (direction === "right") {
-        let sibling = currentCell.nextElementSibling;
-        while (sibling) {
-          if (sibling.classList.contains("cell-editable")) {
-            targetCell = sibling;
-            break;
-          }
-          sibling = sibling.nextElementSibling;
-        }
-      } else if (direction === "left") {
-        let sibling = currentCell.previousElementSibling;
-        while (sibling) {
-          if (sibling.classList.contains("cell-editable")) {
-            targetCell = sibling;
-            break;
-          }
-          sibling = sibling.previousElementSibling;
+    function navigateAndEdit(studentId, currentKey, direction) {
+      const selectedClassroom = document.getElementById("gradebook-filter-classroom").value;
+      const selectedSubject = document.getElementById("gradebook-filter-subject").value;
+      const filteredData = dbGrades.filter(st => {
+        const roomMatch = selectedClassroom === "all" || st.classroom === selectedClassroom;
+        const subjMatch = selectedSubject === "all" || st.subject_code === selectedSubject;
+        return roomMatch && subjMatch;
+      });
+
+      let currentHeaders = dbAllHeaders;
+      if (filteredData.length > 0) {
+        const uniqueSheets = [...new Set(filteredData.map(r => r._sheetName))];
+        if (uniqueSheets.length === 1 && dbSheetHeadersMap[uniqueSheets[0]]) {
+          currentHeaders = dbSheetHeadersMap[uniqueSheets[0]];
         }
       }
-      
-      if (targetCell && targetCell.classList.contains("cell-editable")) {
+      const scoreHeaders = getScoreHeaders(currentHeaders);
+
+      const keys = [
+        "student_id",
+        "name",
+        "classroom",
+        "student_no",
+        "subject_code",
+        ...scoreHeaders,
+        "midterm_score",
+        "final_score",
+        "comment"
+      ];
+
+      const rows = Array.from(document.querySelectorAll("#gradebook-table-body tr"));
+      const studentIds = rows.map(r => {
+        const cell = r.querySelector("td[data-key='student_id']");
+        return cell ? cell.textContent.trim() : null;
+      }).filter(id => id !== null);
+
+      let targetStudentId = studentId;
+      let targetKey = currentKey;
+
+      if (direction === "down" || direction === "up") {
+        const idx = studentIds.indexOf(String(studentId).trim());
+        if (idx !== -1) {
+          if (direction === "down" && idx < studentIds.length - 1) {
+            targetStudentId = studentIds[idx + 1];
+          } else if (direction === "up" && idx > 0) {
+            targetStudentId = studentIds[idx - 1];
+          }
+        }
+      } else if (direction === "right" || direction === "left") {
+        const idx = keys.indexOf(currentKey);
+        if (idx !== -1) {
+          if (direction === "right" && idx < keys.length - 1) {
+            targetKey = keys[idx + 1];
+          } else if (direction === "left" && idx > 0) {
+            targetKey = keys[idx - 1];
+          }
+        }
+      }
+
+      if (targetStudentId && targetKey) {
         setTimeout(() => {
-          targetCell.click();
-        }, 80);
+          const targetCell = document.querySelector(`#gradebook-table-body td[data-student-id="${targetStudentId}"][data-key="${targetKey}"]`);
+          if (targetCell) {
+            targetCell.click();
+          }
+        }, 120);
       }
     }
 
@@ -1344,6 +1371,9 @@
 
       // Save handlers
       const saveFn = () => {
+        if (input.wasSaved) return;
+        input.wasSaved = true;
+        
         let newVal = input.value.trim();
         
         if (typeOrMax !== 'text' && typeOrMax !== 'number-free') {
@@ -1383,19 +1413,19 @@
         if (e.key === "Enter") {
           e.preventDefault();
           saveFn();
-          navigateAndEdit(cellElement, "down");
+          navigateAndEdit(studentId, key, "down");
         } else if (e.key === "Tab") {
           e.preventDefault();
           saveFn();
-          navigateAndEdit(cellElement, e.shiftKey ? "left" : "right");
+          navigateAndEdit(studentId, key, e.shiftKey ? "left" : "right");
         } else if (e.key === "ArrowDown") {
           e.preventDefault();
           saveFn();
-          navigateAndEdit(cellElement, "down");
+          navigateAndEdit(studentId, key, "down");
         } else if (e.key === "ArrowUp") {
           e.preventDefault();
           saveFn();
-          navigateAndEdit(cellElement, "up");
+          navigateAndEdit(studentId, key, "up");
         } else if (e.key === "Escape") {
           cellElement.textContent = originalVal === "" ? "-" : originalVal;
           activeEditingCell = null;
