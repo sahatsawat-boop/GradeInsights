@@ -70,6 +70,8 @@ function doPost(e) {
       result = deleteColumnAPI(params.sheetName, params.columnName);
     } else if (action === "renameColumn") {
       result = renameColumnAPI(params.sheetName, params.oldColumnName, params.newColumnName);
+    } else if (action === "deleteStudent") {
+      result = deleteStudentAPI(params.sheetName, params.studentId, params.subjectCode);
     } else if (action === "addStudent") {
       var studentDataObj = typeof params.studentData === "string" ? JSON.parse(params.studentData) : params.studentData;
       result = addStudentAPI(params.sheetName, studentDataObj);
@@ -709,5 +711,36 @@ function renameColumnAPI(sheetName, oldColumnName, newColumnName) {
     }
   } catch (err) {
     return {status: "error", message: "เกิดข้อผิดพลาดในการเปลี่ยนชื่อคอลัมน์: " + err.message};
+  }
+}
+
+/**
+ * ลบแถวรายชื่อนักเรียนในชีทที่กำหนด
+ */
+function deleteStudentAPI(sheetName, studentId, subjectCode) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return {status: "error", message: "ไม่พบแผ่นงานย่อยชื่อ \"" + sheetName + "\""};
+    
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    
+    var targetRowIndex = -1;
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(studentId) && String(data[i][4]) === String(subjectCode)) {
+        targetRowIndex = i + 1; // 1-based index
+        break;
+      }
+    }
+    
+    if (targetRowIndex !== -1) {
+      sheet.deleteRow(targetRowIndex);
+      return {status: "success"};
+    } else {
+      return {status: "error", message: "ไม่พบนักเรียนดังกล่าวในชีท"};
+    }
+  } catch (err) {
+    return {status: "error", message: "เกิดข้อผิดพลาดในการลบนักเรียน: " + err.message};
   }
 }

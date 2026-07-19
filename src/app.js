@@ -85,6 +85,7 @@
           else if (action === "addColumn") runner.addColumnAPI(params.sheetName, params.columnName);
           else if (action === "deleteColumn") runner.deleteColumnAPI(params.sheetName, params.columnName);
           else if (action === "renameColumn") runner.renameColumnAPI(params.sheetName, params.oldColumnName, params.newColumnName);
+          else if (action === "deleteStudent") runner.deleteStudentAPI(params.sheetName, params.studentId, params.subjectCode);
           else if (action === "addStudent") runner.addStudentAPI(params.sheetName, params.studentData);
           else if (action === "addStudentsBulk") runner.addStudentsBulkAPI(params.studentsList);
           else if (action === "createSampleData") runner.createSampleDataAPI();
@@ -1215,6 +1216,7 @@
         <th>รวม (100)</th>
         <th>เกรด</th>
         <th>ความเห็น</th>
+        <th class="no-print">จัดการ</th>
       `;
       headerRow.innerHTML = headerHtml;
 
@@ -1261,6 +1263,11 @@
           <td class="font-bold text-success">${calc.grade}</td>
           <td class="cell-editable text-left small" data-student-id="${st.student_id}" data-key="comment" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'comment', 'text')">
             ${st.comment || "-"}
+          </td>
+          <td class="no-print" style="text-align: center;">
+            <button type="button" onclick="confirmDeleteStudent('${st.student_id}', '${st.subject_code}', '${st.name}')" style="padding: 4px 8px; font-size: 11px; border-radius: 6px; border: 1px solid var(--danger); color: var(--danger); background: transparent; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='var(--danger)'; this.style.color='white'" onmouseout="this.style.background='transparent'; this.style.color='var(--danger)'" title="ลบรายชื่อนักเรียนคนนี้">
+              <i class="fa-solid fa-trash-can"></i> ลบ
+            </button>
           </td>
         `;
 
@@ -1338,6 +1345,60 @@
             targetCell.click();
           }
         }, 120);
+      }
+    }
+
+    function confirmDeleteStudent(studentId, subjectCode, studentName) {
+      if (!confirm(`คุณครูยืนยันที่จะลบรายชื่อนักเรียน "${studentName}" (รหัส ${studentId}) ออกจากระบบสเปรดชีตใช่หรือไม่?\n*(การลบข้อมูลนี้จะไม่สามารถย้อนกลับได้)`)) {
+        return;
+      }
+
+      const syncStatus = document.getElementById("sync-status");
+      if (syncStatus) {
+        syncStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังลบนักเรียน...';
+        syncStatus.className = "text-warning";
+      }
+
+      const record = dbGrades.find(g => String(g.student_id).trim() === String(studentId).trim() && String(g.subject_code).trim() === String(subjectCode).trim());
+      const targetSheet = record ? record._sheetName : activeSheetName;
+
+      if (isGAS || getBackendURL()) {
+        callBackendAPI("deleteStudent", { sheetName: targetSheet, studentId: studentId, subjectCode: subjectCode })
+          .then(res => {
+            if (res && res.status === "success") {
+              showToast(`🗑️ ลบรายชื่อนักเรียน "${studentName}" สำเร็จ!`, "success");
+              
+              // Remove locally
+              dbGrades = dbGrades.filter(g => !(String(g.student_id).trim() === String(studentId).trim() && String(g.subject_code).trim() === String(subjectCode).trim()));
+              SafeStorage.setItem("db_grades", JSON.stringify(dbGrades));
+
+              if (syncStatus) {
+                syncStatus.innerHTML = '<i class="fa-solid fa-check-circle"></i> ลบข้อมูลสำเร็จ';
+                syncStatus.className = "text-success";
+              }
+
+              handleGradebookFilterChange();
+            } else {
+              showToast("❌ ลบนักเรียนล้มเหลว: " + (res ? res.message : "เกิดข้อผิดพลาด"), "danger");
+              if (syncStatus) {
+                syncStatus.innerHTML = '❌ ลบล้มเหลว';
+                syncStatus.className = "text-danger";
+              }
+            }
+          })
+          .catch(err => {
+            showToast("❌ การเชื่อมต่อล้มเหลว: " + err.message, "danger");
+            if (syncStatus) {
+              syncStatus.innerHTML = '❌ การเชื่อมต่อขัดข้อง';
+              syncStatus.className = "text-danger";
+            }
+          });
+      } else {
+        // Local mode fallback
+        dbGrades = dbGrades.filter(g => !(String(g.student_id).trim() === String(studentId).trim() && String(g.subject_code).trim() === String(subjectCode).trim()));
+        SafeStorage.setItem("db_grades", JSON.stringify(dbGrades));
+        showToast(`🗑️ [Local] ลบรายชื่อนักเรียน "${studentName}" สำเร็จ!`, "success");
+        handleGradebookFilterChange();
       }
     }
 
