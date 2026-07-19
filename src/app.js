@@ -662,13 +662,9 @@
         collectMax += parseMaxScore(sh);
       });
 
-      // Scaled up collect points to base 60 if configured otherwise
-      let scaledCollect = collectTotal;
-      if (collectMax > 0 && collectMax !== 60) {
-        scaledCollect = (collectTotal / collectMax) * 60;
-      }
-
-      const totalScore = scaledCollect + midterm + final;
+      // Use raw sum of scores directly as per user request
+      const scaledCollect = collectTotal;
+      const totalScore = collectTotal + midterm + final;
       
       let grade = 0;
       if (totalScore >= 80) grade = 4;
