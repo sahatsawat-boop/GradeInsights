@@ -1298,7 +1298,7 @@
         }
 
         // Apply changes locally immediately
-        const record = dbGrades.find(g => g.student_id === studentId && g.subject_code === subjectCode);
+        const record = dbGrades.find(g => String(g.student_id).trim() === String(studentId).trim() && String(g.subject_code).trim() === String(subjectCode).trim());
         const targetSheet = record ? record._sheetName : activeSheetName;
         if (record) {
           record[key] = newVal;
@@ -1338,7 +1338,7 @@
       // ค้นหาชีทปลายทางของแถวนักเรียนนี้
       let targetSheet = targetSheetFromParam;
       if (!targetSheet) {
-        const record = dbGrades.find(g => g.student_id === studentId && g.subject_code === subjectCode);
+        const record = dbGrades.find(g => String(g.student_id).trim() === String(studentId).trim() && String(g.subject_code).trim() === String(subjectCode).trim());
         targetSheet = record ? record._sheetName : activeSheetName;
       }
 
