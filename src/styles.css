@@ -1006,4 +1006,17 @@
       }
     }
 
+    
+    .header-editable {
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s;
+    }
+    .header-editable:hover {
+      background: rgba(255,255,255,0.15) !important;
+    }
+    body.dark-mode .header-editable:hover {
+      background: rgba(255,255,255,0.08) !important;
+    }
+
     .d-none { display: none !important; }

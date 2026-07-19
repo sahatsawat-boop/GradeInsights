@@ -68,6 +68,8 @@ function doPost(e) {
       result = addColumnAPI(params.sheetName, params.columnName);
     } else if (action === "deleteColumn") {
       result = deleteColumnAPI(params.sheetName, params.columnName);
+    } else if (action === "renameColumn") {
+      result = renameColumnAPI(params.sheetName, params.oldColumnName, params.newColumnName);
     } else if (action === "addStudent") {
       var studentDataObj = typeof params.studentData === "string" ? JSON.parse(params.studentData) : params.studentData;
       result = addStudentAPI(params.sheetName, studentDataObj);
@@ -686,4 +688,26 @@ function createSampleDataAPI() {
   }
 }
 
-
+/**
+ * แก้ไขชื่อคอลัมน์คะแนนเก็บในชีทที่กำหนด
+ */
+function renameColumnAPI(sheetName, oldColumnName, newColumnName) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return {status: "error", message: "ไม่พบแผ่นงานย่อยชื่อ \"" + sheetName + "\""};
+    
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    
+    var colIndex = headers.indexOf(oldColumnName);
+    if (colIndex !== -1) {
+      sheet.getRange(1, colIndex + 1).setValue(newColumnName);
+      return {status: "success"};
+    } else {
+      return {status: "error", message: "ไม่พบหัวข้อคะแนนดังกล่าวในชีท"};
+    }
+  } catch (err) {
+    return {status: "error", message: "เกิดข้อผิดพลาดในการเปลี่ยนชื่อคอลัมน์: " + err.message};
+  }
+}

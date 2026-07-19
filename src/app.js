@@ -84,6 +84,7 @@
           else if (action === "updateScores") runner.updateScoresAPI(params.sheetName, params.studentId, params.subjectCode, params.scores);
           else if (action === "addColumn") runner.addColumnAPI(params.sheetName, params.columnName);
           else if (action === "deleteColumn") runner.deleteColumnAPI(params.sheetName, params.columnName);
+          else if (action === "renameColumn") runner.renameColumnAPI(params.sheetName, params.oldColumnName, params.newColumnName);
           else if (action === "addStudent") runner.addStudentAPI(params.sheetName, params.studentData);
           else if (action === "addStudentsBulk") runner.addStudentsBulkAPI(params.studentsList);
           else if (action === "createSampleData") runner.createSampleDataAPI();
@@ -1203,7 +1204,7 @@
         <th>รหัสวิชา</th>
       `;
       scoreHeaders.forEach(sh => {
-        headerHtml += `<th>${sh}</th>`;
+        headerHtml += `<th class="header-editable" onclick="makeHeaderEditable(this, '${sh}')" title="คลิกเพื่อเปลี่ยนชื่อกิจกรรม/คะแนนเต็ม">${sh}</th>`;
       });
       headerHtml += `
         <th>กลางภาค (20)</th>
@@ -1335,6 +1336,131 @@
           }
         }, 120);
       }
+    }
+
+    let activeEditingHeader = null;
+
+    function makeHeaderEditable(headerElement, oldHeaderName) {
+      if (activeEditingHeader) return;
+      activeEditingHeader = headerElement;
+
+      const originalVal = oldHeaderName;
+      headerElement.innerHTML = "";
+
+      const input = document.createElement("input");
+      input.className = "cell-input";
+      input.style.width = "90px";
+      input.style.fontSize = "12px";
+      input.style.textAlign = "center";
+      input.value = originalVal;
+
+      headerElement.appendChild(input);
+      input.focus();
+      input.select();
+
+      const saveHeaderFn = () => {
+        if (input.wasSaved) return;
+        input.wasSaved = true;
+
+        const newHeaderName = input.value.trim();
+        activeEditingHeader = null;
+
+        if (newHeaderName === "" || newHeaderName === originalVal) {
+          headerElement.textContent = originalVal;
+          return;
+        }
+
+        // Show loading status
+        const syncStatus = document.getElementById("sync-status");
+        syncStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังเปลี่ยนชื่อคอลัมน์...';
+        syncStatus.className = "text-warning";
+
+        const selectedSubject = document.getElementById("gradebook-filter-subject").value;
+        const targetSheetName = selectedSubject !== "all" ? selectedSubject : activeSheetName;
+
+        if (isGAS || getBackendURL()) {
+          callBackendAPI("renameColumn", { sheetName: targetSheetName, oldColumnName: originalVal, newColumnName: newHeaderName })
+            .then(res => {
+              if (res && res.status === "success") {
+                showToast(`✅ เปลี่ยนชื่อหัวข้อเป็น "${newHeaderName}" สำเร็จ!`, "success");
+                
+                // Update local structures
+                if (dbSheetHeadersMap[targetSheetName]) {
+                  const idx = dbSheetHeadersMap[targetSheetName].indexOf(originalVal);
+                  if (idx !== -1) {
+                    dbSheetHeadersMap[targetSheetName][idx] = newHeaderName;
+                  }
+                }
+                
+                dbGrades.forEach(g => {
+                  if (g._sheetName === targetSheetName) {
+                    g[newHeaderName] = g[originalVal];
+                    delete g[originalVal];
+                  }
+                });
+
+                const allIdx = dbAllHeaders.indexOf(originalVal);
+                if (allIdx !== -1) {
+                  dbAllHeaders[allIdx] = newHeaderName;
+                }
+                
+                SafeStorage.setItem("db_grades", JSON.stringify(dbGrades));
+                SafeStorage.setItem("db_headers", JSON.stringify(dbAllHeaders));
+
+                syncStatus.innerHTML = '<i class="fa-solid fa-check-circle"></i> เปลี่ยนชื่อสำเร็จ';
+                syncStatus.className = "text-success";
+                
+                handleGradebookFilterChange();
+              } else {
+                showToast("❌ เปลี่ยนชื่อคอลัมน์ล้มเหลว: " + (res ? res.message : "เกิดข้อผิดพลาด"), "danger");
+                headerElement.textContent = originalVal;
+                syncStatus.innerHTML = '❌ เปลี่ยนชื่อล้มเหลว';
+                syncStatus.className = "text-danger";
+              }
+            })
+            .catch(err => {
+              showToast("❌ การเชื่อมต่อล้มเหลว: " + err.message, "danger");
+              headerElement.textContent = originalVal;
+              syncStatus.innerHTML = '❌ การเชื่อมต่อขัดข้อง';
+              syncStatus.className = "text-danger";
+            });
+        } else {
+          // Local fallback mode
+          if (dbSheetHeadersMap[targetSheetName]) {
+            const idx = dbSheetHeadersMap[targetSheetName].indexOf(originalVal);
+            if (idx !== -1) {
+              dbSheetHeadersMap[targetSheetName][idx] = newHeaderName;
+            }
+          }
+          dbGrades.forEach(g => {
+            if (g._sheetName === targetSheetName) {
+              g[newHeaderName] = g[originalVal];
+              delete g[originalVal];
+            }
+          });
+          const allIdx = dbAllHeaders.indexOf(originalVal);
+          if (allIdx !== -1) {
+            dbAllHeaders[allIdx] = newHeaderName;
+          }
+          SafeStorage.setItem("db_grades", JSON.stringify(dbGrades));
+          SafeStorage.setItem("db_headers", JSON.stringify(dbAllHeaders));
+
+          showToast(`✅ [Local] เปลี่ยนชื่อหัวข้อเป็น "${newHeaderName}"`, "success");
+          handleGradebookFilterChange();
+        }
+      };
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          saveHeaderFn();
+        } else if (e.key === "Escape") {
+          headerElement.textContent = originalVal;
+          activeEditingHeader = null;
+        }
+      });
+
+      input.addEventListener("blur", saveHeaderFn);
     }
 
     function makeCellEditable(cellElement, studentId, subjectCode, key, typeOrMax) {
