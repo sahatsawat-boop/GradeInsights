@@ -47,6 +47,81 @@
       }
     };
 
+    // REST API Configuration for GitHub Pages hosting
+    const DEFAULT_BACKEND_URL = ""; // ใส่ URL เว็บแอปของคุณครูตรงนี้ได้เลย (เช่น https://script.google.com/macros/s/.../exec)
+    
+    function getBackendURL() {
+      return SafeStorage.getItem("backend_web_app_url") || DEFAULT_BACKEND_URL;
+    }
+
+    function saveConnectionSettings() {
+      const urlInput = document.getElementById("settings-web-app-url");
+      if (urlInput) {
+        const url = urlInput.value.trim();
+        SafeStorage.setItem("backend_web_app_url", url);
+        showToast("💾 บันทึก Web App URL เรียบร้อยแล้ว!", "success");
+        
+        // ถ้าอยู่ในโหมดออฟไลน์ ให้ซิงค์ข้อมูลใหม่ทันที
+        if (!isGAS) {
+          syncTeacherGrades();
+        }
+      }
+    }
+
+    async function callBackendAPI(action, params = {}) {
+      const url = getBackendURL();
+      
+      if (isGAS) {
+        return new Promise((resolve, reject) => {
+          var runner = google.script.run
+            .withSuccessHandler(res => resolve(res))
+            .withFailureHandler(err => reject(err));
+          
+          if (action === "getInitData") runner.getInitData();
+          else if (action === "fetchAllGrades") runner.fetchAllGradesAcrossSheetsAPI();
+          else if (action === "searchStudent") runner.searchStudentAcrossSheetsAPI(params.studentId, params.classroom);
+          else if (action === "fetchGradesData") runner.fetchGradesData(params.sheetName);
+          else if (action === "updateScores") runner.updateScoresAPI(params.sheetName, params.studentId, params.subjectCode, params.scores);
+          else if (action === "addColumn") runner.addColumnAPI(params.sheetName, params.columnName);
+          else if (action === "deleteColumn") runner.deleteColumnAPI(params.sheetName, params.columnName);
+          else if (action === "addStudent") runner.addStudentAPI(params.sheetName, params.studentData);
+          else if (action === "addStudentsBulk") runner.addStudentsBulkAPI(params.studentsList);
+          else if (action === "createSampleData") runner.createSampleDataAPI();
+          else reject(new Error("Unknown action: " + action));
+        });
+      } else {
+        // Run outside GAS environment (REST API calls)
+        if (!url) {
+          throw new Error("ยังไม่ได้กำหนดค่า Web App URL ในหน้าตั้งค่า");
+        }
+        
+        // GET requests (Query Params)
+        if (["getInitData", "fetchAllGrades", "searchStudent", "fetchGradesData"].includes(action)) {
+          var queryParams = new URLSearchParams({ action: action, ...params }).toString();
+          var fetchUrl = `${url}?${queryParams}&ts=${Date.now()}`;
+          var response = await fetch(fetchUrl);
+          if (!response.ok) throw new Error("การเชื่อมต่อระบบล้มเหลว สถานะ: " + response.status);
+          return await response.json();
+        } 
+        // POST requests
+        else {
+          var payload = { action: action, ...params };
+          // We use no-cors to bypass CORS errors. The Google Sheet will receive the request and update,
+          // but we won't be able to inspect the response.
+          await fetch(url, {
+            method: "POST",
+            mode: "no-cors",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+          });
+          // Since no-cors hides the response, we simulate success
+          return { status: "success" };
+        }
+      }
+    }
+
     // -------------------------------------------------------------
     // DEFAULT MOCK DATA
     // -------------------------------------------------------------
@@ -125,10 +200,19 @@
 // โค้ดทั้งหมดจะอยู่ในไฟล์ Code.gs ของโปรเจกต์คุณครูเรียบร้อยแล้ว`;
       }
 
+      // Populate settings Web App URL input
+      const urlInput = document.getElementById("settings-web-app-url");
+      if (urlInput) {
+        urlInput.value = getBackendURL();
+      }
+
       // Load initial config from database
-      if (isGAS) {
-        google.script.run
-          .withSuccessHandler(res => {
+      if (isGAS || getBackendURL()) {
+        if (!isGAS) {
+          showToast("🔗 กำลังเชื่อมต่อฐานข้อมูล Google Sheets...", "info");
+        }
+        callBackendAPI("getInitData")
+          .then(res => {
             if (res && res.status === "success") {
               dbSheetNames = res.sheetNames || [];
               dbClassrooms = res.classrooms || [];
@@ -150,16 +234,18 @@
                 opt.textContent = c;
                 select.appendChild(opt);
               });
+              if (!isGAS) {
+                showToast("✅ เชื่อมต่อฐานข้อมูลสำเร็จ", "success");
+              }
             } else {
-              showToast("⚠️ ไม่สามารถสแกนข้อมูลเริ่มต้นจาก Google Sheets ได้", "danger");
+              showToast("⚠️ ไม่สามารถโหลดข้อมูลเริ่มต้นได้ ใช้โหมดออฟไลน์แทน", "warning");
               loadLocalFallback();
             }
           })
-          .withFailureHandler(err => {
-            showToast("⚠️ การเชื่อมต่อล้มเหลว: " + err.message, "danger");
+          .catch(err => {
+            showToast("⚠️ การเชื่อมต่อฐานข้อมูลล้มเหลว: " + err.message, "danger");
             loadLocalFallback();
-          })
-          .getInitData();
+          });
       } else {
         loadLocalFallback();
       }
@@ -191,9 +277,9 @@
       const notice = document.getElementById("no-data-notice");
       showToast("⚙️ กำลังสร้างข้อมูลตัวอย่างลงใน Google Sheets...", "info");
       
-      if (isGAS) {
-        google.script.run
-          .withSuccessHandler(res => {
+      if (isGAS || getBackendURL()) {
+        callBackendAPI("createSampleData")
+          .then(res => {
             if (res && res.status === "success") {
               showToast("✅ สร้างข้อมูลตัวอย่างสำเร็จ!", "success");
               if (notice) notice.classList.add("d-none");
@@ -202,10 +288,9 @@
               showToast("❌ เกิดข้อผิดพลาด: " + (res ? res.message : "ไม่สามารถระบุได้"), "danger");
             }
           })
-          .withFailureHandler(err => {
+          .catch(err => {
             showToast("❌ การเชื่อมต่อเซิร์ฟเวอร์ล้มเหลว: " + err.message, "danger");
-          })
-          .createSampleDataAPI();
+          });
       } else {
         showToast("ℹ️ ทำงานในโหมดออฟไลน์ มีข้อมูลจำลองพร้อมทดสอบอยู่แล้ว", "info");
       }
@@ -237,9 +322,9 @@
         syncStatus.className = "text-warning";
       }
 
-      if (isGAS) {
-        google.script.run
-          .withSuccessHandler(res => {
+      if (isGAS || getBackendURL()) {
+        callBackendAPI("fetchAllGrades")
+          .then(res => {
             if (res && res.status === "success") {
               dbGrades = res.data || [];
               dbSheetNames = res.sheetNames || [];
@@ -265,10 +350,9 @@
               showToast("❌ โหลดข้อมูลล้มเหลว: " + res.message, "danger");
             }
           })
-          .withFailureHandler(err => {
+          .catch(err => {
             showToast("❌ การเชื่อมต่อล้มเหลว: " + err.message, "danger");
-          })
-          .fetchAllGradesAcrossSheetsAPI();
+          });
       } else {
         // Local mode fallback
         dbHeaders = DEFAULT_HEADERS;
@@ -348,9 +432,9 @@
 
       showToast("🔍 กำลังสแกนหาข้อมูลนักเรียน...", "info");
 
-      if (isGAS) {
-        google.script.run
-          .withSuccessHandler(res => {
+      if (isGAS || getBackendURL()) {
+        callBackendAPI("searchStudent", { studentId: studentId, classroom: classroom })
+          .then(res => {
             if (res && res.status === "success") {
               if (res.results && res.results.length > 0) {
                 studentFoundRecords = res.results;
@@ -365,10 +449,9 @@
               showToast("❌ เกิดข้อผิดพลาดของระบบเซิร์ฟเวอร์", "danger");
             }
           })
-          .withFailureHandler(err => {
+          .catch(err => {
             showToast("❌ เกิดข้อผิดพลาดการสื่อสาร: " + err.message, "danger");
-          })
-          .searchStudentAcrossSheetsAPI(studentId, classroom);
+          });
       } else {
         // Local simulation lookup across mock database
         const matches = dbGrades.filter(g => 
@@ -780,6 +863,8 @@
           title.textContent = "ระบบสแกนงานค้างและแจ้งเตือนเด็ก";
         } else if (tab === "gradebook") {
           title.textContent = "ตารางรายงานคะแนนนักเรียน";
+        } else if (tab === "settings") {
+          title.textContent = "ตั้งค่าการเชื่อมต่อ";
         }
       }
       
@@ -790,6 +875,11 @@
         renderTeacherAlertsTab();
       } else if (tab === "gradebook") {
         renderTeacherGradebookTab();
+      } else if (tab === "settings") {
+        const urlInput = document.getElementById("settings-web-app-url");
+        if (urlInput) {
+          urlInput.value = getBackendURL();
+        }
       }
     }
 
@@ -1236,9 +1326,9 @@
       const record = dbGrades.find(g => g.student_id === studentId && g.subject_code === subjectCode);
       const targetSheet = record ? record._sheetName : activeSheetName;
 
-      if (isGAS) {
-        google.script.run
-          .withSuccessHandler(res => {
+      if (isGAS || getBackendURL()) {
+        callBackendAPI("updateScores", { sheetName: targetSheet, studentId: studentId, subjectCode: subjectCode, scores: scores })
+          .then(res => {
             if (res && res.status === "success") {
               syncStatus.innerHTML = '<i class="fa-solid fa-check-circle"></i> บันทึกลง Google Sheets แล้ว';
               syncStatus.className = "text-success";
@@ -1248,12 +1338,11 @@
               showToast("❌ ไม่สามารถบันทึกลงชีทได้: " + res.message, "danger");
             }
           })
-          .withFailureHandler(err => {
+          .catch(err => {
             syncStatus.innerHTML = '❌ การเชื่อมต่อชีทขัดข้อง';
             syncStatus.className = "text-danger";
             showToast("❌ เชื่อมต่อล้มเหลว: " + err.message, "danger");
-          })
-          .updateScoresAPI(targetSheet, studentId, subjectCode, scores);
+          });
       } else {
         setTimeout(() => {
           syncStatus.innerHTML = '<i class="fa-solid fa-check-circle"></i> บันทึกลงบราว์เซอร์โลคอลแล้ว';
@@ -1305,9 +1394,9 @@
 
       showToast("👤 กำลังเพิ่มรายชื่อนักเรียน...", "info");
 
-      if (isGAS) {
-        google.script.run
-          .withSuccessHandler(res => {
+      if (isGAS || getBackendURL()) {
+        callBackendAPI("addStudent", { sheetName: targetSheet, studentData: studentData })
+          .then(res => {
             if (res && res.status === "success") {
               showToast("✅ เพิ่มข้อมูลสำเร็จ กำลังดึงข้อมูลตารางใหม่...", "success");
               closeModal("add-student-modal");
@@ -1316,10 +1405,9 @@
               showToast("❌ เพิ่มข้อมูลไม่สำเร็จ: " + res.message, "danger");
             }
           })
-          .withFailureHandler(err => {
+          .catch(err => {
             showToast("❌ ข้อผิดพลาดเซิร์ฟเวอร์: " + err.message, "danger");
-          })
-          .addStudentAPI(targetSheet, studentData);
+          });
       } else {
         // Local simulation add
         studentData["_sheetName"] = targetSheet;
@@ -1417,25 +1505,20 @@
       
       showToast(`📤 กำลังนำเข้ารายชื่อนักเรียน ${studentsList.length} คน...`, "info");
       
-      if (isGAS) {
-        google.script.run
-          .withSuccessHandler(res => {
-            if (res && res.status === "success") {
-              let msg = `✅ นำเข้าสำเร็จ (เพิ่มใหม่: ${res.added} คน, อัปเดตซ้ำ: ${res.updated} คน)`;
-              if (res.createdSheets && res.createdSheets.length > 0) {
-                msg += ` สร้างชีทวิชาใหม่ ${res.createdSheets.length} แท็บ`;
-              }
-              showToast(msg, "success");
-              closeModal("add-student-modal");
-              syncTeacherGrades();
-            } else {
-              showToast("❌ นำเข้าข้อมูลไม่สำเร็จ: " + res.message, "danger");
+      if (isGAS || getBackendURL()) {
+        callBackendAPI("addStudentsBulk", { studentsList: studentsList })
+          .then(res => {
+            let msg = `✅ นำเข้าสำเร็จ (เพิ่มใหม่: ${res.added !== undefined ? res.added : studentsList.length} คน)`;
+            if (res.createdSheets && res.createdSheets.length > 0) {
+              msg += ` สร้างชีทวิชาใหม่ ${res.createdSheets.length} แท็บ`;
             }
+            showToast(msg, "success");
+            closeModal("add-student-modal");
+            syncTeacherGrades();
           })
-          .withFailureHandler(err => {
+          .catch(err => {
             showToast("❌ ข้อผิดพลาดการซิงค์: " + err.message, "danger");
-          })
-          .addStudentsBulkAPI(studentsList);
+          });
       } else {
         // จำลองการอัปเดตแบบออฟไลน์ (Local simulation)
         let addedLocal = 0;
@@ -1537,9 +1620,9 @@
 
       showToast("➕ กำลังเพิ่มคอลัมน์คะแนนใหม่...", "info");
 
-      if (isGAS) {
-        google.script.run
-          .withSuccessHandler(res => {
+      if (isGAS || getBackendURL()) {
+        callBackendAPI("addColumn", { sheetName: targetSheet, columnName: columnName })
+          .then(res => {
             if (res && res.status === "success") {
               showToast("✅ เพิ่มคอลัมน์สำเร็จ กำลังดึงตารางใหม่...", "success");
               closeModal("add-column-modal");
@@ -1548,10 +1631,9 @@
               showToast("❌ เพิ่มคอลัมน์ล้มเหลว: " + res.message, "danger");
             }
           })
-          .withFailureHandler(err => {
+          .catch(err => {
             showToast("❌ เซิร์ฟเวอร์ล้มเหลว: " + err.message, "danger");
-          })
-          .addColumnAPI(targetSheet, columnName);
+          });
       } else {
         // Local simulation add
         dbHeaders.splice(dbHeaders.length - 1, 0, columnName);
@@ -1631,9 +1713,9 @@
 
       showToast("🗑️ กำลังลบคอลัมน์คะแนน...", "info");
 
-      if (isGAS) {
-        google.script.run
-          .withSuccessHandler(res => {
+      if (isGAS || getBackendURL()) {
+        callBackendAPI("deleteColumn", { sheetName: targetSheet, columnName: columnName })
+          .then(res => {
             if (res && res.status === "success") {
               showToast("✅ ลบคอลัมน์เรียบร้อย กำลังซิงค์ข้อมูลใหม่...", "success");
               closeModal("delete-column-modal");
@@ -1642,10 +1724,9 @@
               showToast("❌ ลบคอลัมน์ล้มเหลว: " + res.message, "danger");
             }
           })
-          .withFailureHandler(err => {
+          .catch(err => {
             showToast("❌ เกิดข้อผิดพลาดฝั่งเซิร์ฟเวอร์: " + err.message, "danger");
-          })
-          .deleteColumnAPI(targetSheet, columnName);
+          });
       } else {
         // Local simulation delete
         if (dbSheetHeadersMap[targetSheet]) {

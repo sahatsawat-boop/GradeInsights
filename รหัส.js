@@ -4,7 +4,32 @@
  */
 
 // โหมดเริ่มต้น: แสดงหน้าเว็บแอปพลิเคชัน (HTML) เมื่อเปิดผ่านลิงก์ Web App
+// ฟังก์ชันควบคุมสิทธิ์และการแสดงผลหน้าเว็บ หรือรับส่งข้อมูลผ่าน API
 function doGet(e) {
+  // ตรวจจับกรณีเป็นการเรียกใช้งานข้ามเซิร์ฟเวอร์ (API GET Request)
+  if (e.parameter.action) {
+    var action = e.parameter.action;
+    var result;
+    try {
+      if (action === "getInitData") {
+        result = getInitData();
+      } else if (action === "fetchAllGrades") {
+        result = fetchAllGradesAcrossSheetsAPI();
+      } else if (action === "searchStudent") {
+        result = searchStudentAcrossSheetsAPI(e.parameter.studentId, e.parameter.classroom);
+      } else if (action === "fetchGradesData") {
+        result = fetchGradesData(e.parameter.sheetName);
+      } else {
+        result = { status: "error", message: "ไม่พบ Action GET ที่ต้องการ" };
+      }
+    } catch(err) {
+      result = { status: "error", message: err.message };
+    }
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // โหมดแสดงหน้าเว็บแอปปกติเมื่อรันในระบบ Google
   try {
     return HtmlService.createHtmlOutputFromFile('index')
       .setTitle('GradeInsights - ระบบดูคะแนนและบันทึกผลการเรียน')
@@ -19,6 +44,47 @@ function doGet(e) {
       "</div>"
     );
   }
+}
+
+// ฟังก์ชันควบคุมการส่งข้อมูลเข้ามาอัปเดตข้ามเซิร์ฟเวอร์ (API POST Request)
+function doPost(e) {
+  var params;
+  try {
+    params = JSON.parse(e.postData.contents);
+  } catch(err) {
+    // ในกรณีส่งข้อมูลผ่าน no-cors หรือฟอร์มธรรมดา
+    params = e.parameter;
+  }
+  
+  var action = params.action;
+  var result;
+  
+  try {
+    if (action === "updateScores") {
+      // แปลงข้อมูลคะแนนเก็บเป็นรูปแบบ Object
+      var scoresObj = typeof params.scores === "string" ? JSON.parse(params.scores) : params.scores;
+      result = updateScoresAPI(params.sheetName, params.studentId, params.subjectCode, scoresObj);
+    } else if (action === "addColumn") {
+      result = addColumnAPI(params.sheetName, params.columnName);
+    } else if (action === "deleteColumn") {
+      result = deleteColumnAPI(params.sheetName, params.columnName);
+    } else if (action === "addStudent") {
+      var studentDataObj = typeof params.studentData === "string" ? JSON.parse(params.studentData) : params.studentData;
+      result = addStudentAPI(params.sheetName, studentDataObj);
+    } else if (action === "addStudentsBulk") {
+      var studentsListObj = typeof params.studentsList === "string" ? JSON.parse(params.studentsList) : params.studentsList;
+      result = addStudentsBulkAPI(studentsListObj);
+    } else if (action === "createSampleData") {
+      result = createSampleDataAPI();
+    } else {
+      result = { status: "error", message: "ไม่พบ Action POST ที่ต้องการ" };
+    }
+  } catch(err) {
+    result = { status: "error", message: err.message };
+  }
+  
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 // -------------------------------------------------------------

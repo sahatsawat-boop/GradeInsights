@@ -219,6 +219,9 @@
           <button class="sidebar-item" id="snav-gradebook" onclick="switchTeacherTab('gradebook')">
             <i class="fa-solid fa-book-open"></i> สมุดเกรด (Gradebook)
           </button>
+          <button class="sidebar-item" id="snav-settings" onclick="switchTeacherTab('settings')">
+            <i class="fa-solid fa-gear"></i> ตั้งค่าการเชื่อมต่อ
+          </button>
           
           <div style="margin-top: auto; padding-top: 15px; border-top: 1px solid var(--card-border);">
             <button class="sidebar-item" onclick="exitTeacherMode()" style="color: var(--danger); width: 100%;">
@@ -366,6 +369,27 @@
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+
+          <!-- ============================================
+               TAB D: SETTINGS
+               ============================================ -->
+          <div id="teacher-tab-settings" class="teacher-tab">
+            <div class="card">
+              <h3><i class="fa-solid fa-gear"></i> ตั้งค่าการเชื่อมต่อ Google Sheets</h3>
+              <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                ระบุ Web App URL ของคุณครูเพื่อใช้ดึงข้อมูลและบันทึกคะแนนเมื่อเปิดใช้งานผ่านหน้าเว็บ GitHub Pages
+              </p>
+              
+              <div class="form-group">
+                <label for="settings-web-app-url"><i class="fa-solid fa-link"></i> Web App URL (จาก Apps Script New Deployment):</label>
+                <input type="url" id="settings-web-app-url" placeholder="https://script.google.com/macros/s/.../exec" style="width: 100%; max-width: 600px; padding: 10px; border-radius: 8px; border: 1px solid var(--card-border); background: rgba(255,255,255,0.4); color: var(--text-main); font-size: 13px; outline: none;" autocomplete="off">
+              </div>
+              
+              <button class="role-btn btn-primary" onclick="saveConnectionSettings()" style="margin-top: 10px; padding: 10px 20px; font-size: 13px; border-radius: 8px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-floppy-disk"></i> บันทึกการตั้งค่า
+              </button>
             </div>
           </div>
 
