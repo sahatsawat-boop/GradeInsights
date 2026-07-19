@@ -2841,6 +2841,48 @@
     // Editable cell event handlers
     let activeEditingCell = null;
 
+    function navigateAndEdit(currentCell, direction) {
+      let targetCell = null;
+      const cellIndex = currentCell.cellIndex;
+      const row = currentCell.parentElement;
+      
+      if (direction === "down") {
+        const nextRow = row.nextElementSibling;
+        if (nextRow && nextRow.cells[cellIndex]) {
+          targetCell = nextRow.cells[cellIndex];
+        }
+      } else if (direction === "up") {
+        const prevRow = row.previousElementSibling;
+        if (prevRow && prevRow.cells[cellIndex]) {
+          targetCell = prevRow.cells[cellIndex];
+        }
+      } else if (direction === "right") {
+        let sibling = currentCell.nextElementSibling;
+        while (sibling) {
+          if (sibling.classList.contains("cell-editable")) {
+            targetCell = sibling;
+            break;
+          }
+          sibling = sibling.nextElementSibling;
+        }
+      } else if (direction === "left") {
+        let sibling = currentCell.previousElementSibling;
+        while (sibling) {
+          if (sibling.classList.contains("cell-editable")) {
+            targetCell = sibling;
+            break;
+          }
+          sibling = sibling.previousElementSibling;
+        }
+      }
+      
+      if (targetCell && targetCell.classList.contains("cell-editable")) {
+        setTimeout(() => {
+          targetCell.click();
+        }, 80);
+      }
+    }
+
     function makeCellEditable(cellElement, studentId, subjectCode, key, typeOrMax) {
       if (activeEditingCell) return; // Only edit one cell at a time
       
@@ -2911,8 +2953,23 @@
       };
 
       input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") saveFn();
-        if (e.key === "Escape") {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          saveFn();
+          navigateAndEdit(cellElement, "down");
+        } else if (e.key === "Tab") {
+          e.preventDefault();
+          saveFn();
+          navigateAndEdit(cellElement, e.shiftKey ? "left" : "right");
+        } else if (e.key === "ArrowDown") {
+          e.preventDefault();
+          saveFn();
+          navigateAndEdit(cellElement, "down");
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          saveFn();
+          navigateAndEdit(cellElement, "up");
+        } else if (e.key === "Escape") {
           cellElement.textContent = originalVal === "" ? "-" : originalVal;
           activeEditingCell = null;
         }
