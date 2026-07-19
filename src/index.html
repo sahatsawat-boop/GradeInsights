@@ -420,7 +420,7 @@
       </div>
       <div class="form-group" style="margin-bottom: 15px;">
         <label for="teacher-password">กรอกรหัสผ่าน PIN สำหรับคุณครู:</label>
-        <input type="password" id="teacher-password" placeholder="รหัส PIN ความปลอดภัย (ปกติคือ 1234)" autocomplete="off">
+        <input type="password" id="teacher-password" placeholder="รหัส PIN ความปลอดภัย (ปกติคือ 1234)" autocomplete="off" onkeydown="if(event.key === 'Enter') verifyTeacherLogin()">
       </div>
       <div id="login-error-msg" class="text-danger small d-none" style="margin-bottom: 15px; font-weight: 500;">
         <i class="fa-solid fa-triangle-exclamation"></i> รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง
