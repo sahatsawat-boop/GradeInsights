@@ -1207,11 +1207,11 @@
         const tr = document.createElement("tr");
 
         let rowHtml = `
-          <td class="font-semibold">${st.student_id}</td>
-          <td class="text-left font-semibold">${st.name}</td>
-          <td>${st.classroom}</td>
-          <td>${st.student_no}</td>
-          <td>${st.subject_code}</td>
+          <td class="cell-editable font-semibold" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'student_id', 'text')">${st.student_id}</td>
+          <td class="cell-editable text-left font-semibold" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'name', 'text')">${st.name}</td>
+          <td class="cell-editable" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'classroom', 'text')">${st.classroom}</td>
+          <td class="cell-editable" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'student_no', 'number-free')">${st.student_no}</td>
+          <td class="cell-editable" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'subject_code', 'text')">${st.subject_code}</td>
         `;
 
         // Dynamic collect score columns
@@ -1260,8 +1260,14 @@
       
       if (typeOrMax === 'text') {
         input.type = "text";
-        input.style.textAlign = "left";
-        input.setAttribute("list", "quick-comments");
+        input.style.textAlign = key === 'name' ? "left" : "center";
+        if (key === 'comment') {
+          input.setAttribute("list", "quick-comments");
+        }
+      } else if (typeOrMax === 'number-free') {
+        input.type = "number";
+        input.min = 1;
+        input.style.textAlign = "center";
       } else {
         input.type = "number";
         input.min = 0;
@@ -1277,16 +1283,23 @@
       const saveFn = () => {
         let newVal = input.value.trim();
         
-        if (typeOrMax !== 'text') {
+        if (typeOrMax !== 'text' && typeOrMax !== 'number-free') {
           if (newVal === "") {
             newVal = "";
           } else {
             newVal = Math.min(typeOrMax, Math.max(0, parseFloat(newVal) || 0));
           }
+        } else if (typeOrMax === 'number-free') {
+          if (newVal === "") {
+            newVal = "";
+          } else {
+            newVal = Math.max(1, parseInt(newVal) || 1);
+          }
         }
 
         // Apply changes locally immediately
         const record = dbGrades.find(g => g.student_id === studentId && g.subject_code === subjectCode);
+        const targetSheet = record ? record._sheetName : activeSheetName;
         if (record) {
           record[key] = newVal;
           SafeStorage.setItem("db_grades", JSON.stringify(dbGrades));
@@ -1297,7 +1310,7 @@
         activeEditingCell = null;
         
         // Push update to Apps Script or save to Local
-        updateScoresOnSheets(studentId, subjectCode, key, newVal);
+        updateScoresOnSheets(studentId, subjectCode, key, newVal, targetSheet);
         
         // Re-calc grid averages
         handleGradebookFilterChange();
@@ -1314,7 +1327,7 @@
       input.addEventListener("blur", saveFn);
     }
 
-    function updateScoresOnSheets(studentId, subjectCode, key, newVal) {
+    function updateScoresOnSheets(studentId, subjectCode, key, newVal, targetSheetFromParam = null) {
       const syncStatus = document.getElementById("sync-status");
       syncStatus.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึกลงชีท...';
       syncStatus.className = "text-warning";
@@ -1323,8 +1336,11 @@
       scores[key] = newVal;
 
       // ค้นหาชีทปลายทางของแถวนักเรียนนี้
-      const record = dbGrades.find(g => g.student_id === studentId && g.subject_code === subjectCode);
-      const targetSheet = record ? record._sheetName : activeSheetName;
+      let targetSheet = targetSheetFromParam;
+      if (!targetSheet) {
+        const record = dbGrades.find(g => g.student_id === studentId && g.subject_code === subjectCode);
+        targetSheet = record ? record._sheetName : activeSheetName;
+      }
 
       if (isGAS || getBackendURL()) {
         callBackendAPI("updateScores", { sheetName: targetSheet, studentId: studentId, subjectCode: subjectCode, scores: scores })
