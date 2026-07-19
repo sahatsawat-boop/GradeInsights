@@ -556,7 +556,10 @@
       if (Number(calc.totalScore) < 50) {
         const li = document.createElement("li");
         li.className = "critical";
-        li.innerHTML = `<strong>🚨 วิกฤต:</strong> รายวิชา ${data.subject_name} ได้คะแนนรวม ${calc.totalScore} คะแนน ต่ำกว่าเกณฑ์ผ่าน (50) คุณครูให้ความเห็นว่า "<em>${data.comment || 'ไม่มี'}</em>" กรุณาติดต่อยื่นส่งงานเพิ่มด่วนครับ`;
+        const commentPart = (data.comment && data.comment !== "ไม่มี" && data.comment !== "-") 
+          ? ` คุณครูให้ความเห็นว่า "<em>${data.comment}</em>"` 
+          : "";
+        li.innerHTML = `<strong>🚨 วิกฤต:</strong> รายวิชา ${data.subject_name} ได้คะแนนรวม ${calc.totalScore} คะแนน ต่ำกว่าเกณฑ์ผ่าน (50)${commentPart} กรุณาติดต่อยื่นส่งงานเพิ่มด่วนครับ`;
         alertList.appendChild(li);
         alertCount++;
       } else {
