@@ -1,0 +1,7 @@
+# Ignore all files by default
+**/*
+
+# Do not ignore the compiled production files
+!รหัส.js
+!index.html
+!appsscript.json
