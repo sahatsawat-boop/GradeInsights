@@ -1837,6 +1837,11 @@
               if (!isGAS) {
                 showToast("✅ เชื่อมต่อฐานข้อมูลสำเร็จ", "success");
               }
+              
+              // Auto log in if session exists
+              if (SafeStorage.getItem("is_teacher_logged_in") === "true") {
+                enterTeacherMode(true);
+              }
             } else {
               showToast("⚠️ ไม่สามารถโหลดข้อมูลเริ่มต้นได้ ใช้โหมดออฟไลน์แทน", "warning");
               loadLocalFallback();
@@ -1871,6 +1876,11 @@
       
       rebuildLocalDropdowns();
       showToast("ℹ️ ทำงานในโหมดทดสอบแบบออฟไลน์ (Local Mode)", "info");
+      
+      // Auto log in if session exists
+      if (SafeStorage.getItem("is_teacher_logged_in") === "true") {
+        enterTeacherMode(true);
+      }
     }
 
     function generateSampleData() {
@@ -2413,22 +2423,33 @@
       }
     }
 
+    function enterTeacherMode(silent = false) {
+      isTeacherLoggedIn = true;
+      SafeStorage.setItem("is_teacher_logged_in", "true");
+      
+      const modal = document.getElementById("teacher-login-modal");
+      if (modal) closeModal("teacher-login-modal");
+      
+      const btn = document.getElementById("role-switch-btn");
+      if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-gears"></i> แผงควบคุมของคุณครู';
+        btn.className = "role-btn btn-secondary";
+      }
+      
+      showSection("teacher-workspace-sec");
+      syncTeacherGrades(); // โหลดข้อมูลทุกชีทเข้ามาในสมุดเกรดและแดชบอร์ดทันที
+      
+      if (!silent) {
+        showToast("🔓 ปลดล็อคระบบคุณครูสำเร็จ", "success");
+      }
+    }
+
     function verifyTeacherLogin() {
       const enteredPIN = document.getElementById("teacher-password").value;
       const errorMsg = document.getElementById("login-error-msg");
 
       if (enteredPIN === dbTeacherPin) {
-        isTeacherLoggedIn = true;
-        closeModal("teacher-login-modal");
-        
-        // Update upper button
-        const btn = document.getElementById("role-switch-btn");
-        btn.innerHTML = '<i class="fa-solid fa-gears"></i> แผงควบคุมของคุณครู';
-        btn.className = "role-btn btn-secondary";
-        
-        showSection("teacher-workspace-sec");
-        syncTeacherGrades(); // โหลดข้อมูลทุกชีทเข้ามาในสมุดเกรดและแดชบอร์ดทันที
-        showToast("🔓 ปลดล็อคระบบคุณครูสำเร็จ", "success");
+        enterTeacherMode();
       } else {
         errorMsg.classList.remove("d-none");
       }
@@ -2436,9 +2457,13 @@
 
     function exitTeacherMode() {
       isTeacherLoggedIn = false;
+      SafeStorage.setItem("is_teacher_logged_in", "false");
+      
       const btn = document.getElementById("role-switch-btn");
-      btn.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i> เข้าสู่โหมดคุณครู';
-      btn.className = "role-btn btn-primary";
+      if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-chalkboard-user"></i> เข้าสู่โหมดคุณครู';
+        btn.className = "role-btn btn-primary";
+      }
       
       showSection("student-search-sec");
       showToast("🔒 ล็อคความปลอดภัยระบบคุณครูแล้ว", "info");
