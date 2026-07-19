@@ -2854,7 +2854,7 @@
           const max = parseMaxScore(sh);
           rowHtml += `
             <td class="cell-editable" data-student-id="${st.student_id}" data-key="${sh}" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', '${sh}', ${max})">
-              ${st[sh] !== "" ? st[sh] : "-"}
+              ${(st[sh] !== undefined && st[sh] !== null && st[sh] !== "") ? st[sh] : "-"}
             </td>
           `;
         });
@@ -2862,10 +2862,10 @@
         // Midterm & Final score columns
         rowHtml += `
           <td class="cell-editable" data-student-id="${st.student_id}" data-key="midterm_score" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'midterm_score', 20)">
-            ${st.midterm_score !== "" ? st.midterm_score : "-"}
+            ${(st.midterm_score !== undefined && st.midterm_score !== null && st.midterm_score !== "") ? st.midterm_score : "-"}
           </td>
           <td class="cell-editable" data-student-id="${st.student_id}" data-key="final_score" onclick="makeCellEditable(this, '${st.student_id}', '${st.subject_code}', 'final_score', 20)">
-            ${st.final_score !== "" ? st.final_score : "-"}
+            ${(st.final_score !== undefined && st.final_score !== null && st.final_score !== "") ? st.final_score : "-"}
           </td>
           <td class="font-bold text-primary">${calc.totalScore}</td>
           <td class="font-bold text-success">${calc.grade}</td>
