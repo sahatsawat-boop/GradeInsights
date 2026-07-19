@@ -1,0 +1,17 @@
+# OS files
+desktop.ini
+Thumbs.db
+
+# Google Drive stream virtual files
+*.gsheet
+*.gslides
+*.gdoc
+
+# Clasp local credentials / configurations (if any)
+.clasprc.json
+.clasptmp*
+
+# Temporary files & Logs
+*.log
+tmp/
+temp/
