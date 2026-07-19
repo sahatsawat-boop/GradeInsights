@@ -1339,6 +1339,7 @@
               <div class="teacher-content-header" style="border-bottom: none; margin-bottom: 0;">
                 <h3><i class="fa-solid fa-clipboard-list"></i> สมุดบันทึกคะแนนนักเรียน (Gradebook)</h3>
                 <div class="report-actions no-print">
+                  <button class="role-btn btn-secondary" onclick="syncTeacherGrades()" style="border-left: 4px solid var(--success);"><i class="fa-solid fa-arrows-rotate"></i> ซิงค์ข้อมูล</button>
                   <button class="role-btn btn-secondary" style="border-left: 4px solid var(--danger);" onclick="openDeleteColumnModal()"><i class="fa-solid fa-trash-can"></i> ลบคอลัมน์</button>
                   <button class="role-btn btn-secondary" onclick="openAddColumnModal()"><i class="fa-solid fa-plus-circle"></i> เพิ่มคอลัมน์คะแนน</button>
                   <button class="role-btn btn-primary" onclick="openAddStudentModal()"><i class="fa-solid fa-user-plus"></i> เพิ่มชื่อนักเรียน</button>
@@ -1364,7 +1365,12 @@
               <!-- Editable score sheet -->
               <div style="margin: 10px 0; font-size: 12px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;" class="no-print">
                 <span><i class="fa-solid fa-keyboard"></i> <strong>คำแนะนำ:</strong> ดับเบิ้ลคลิก (Double Click) ในช่องคะแนนเพื่อทำการแก้ไขด่วนได้เลย</span>
-                <span id="sync-status" class="text-success"><i class="fa-solid fa-check-circle"></i> ข้อมูลซิงค์เรียบร้อย</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span id="sync-status" class="text-success"><i class="fa-solid fa-check-circle"></i> ข้อมูลซิงค์เรียบร้อย</span>
+                  <button type="button" class="role-btn btn-secondary" onclick="syncTeacherGrades()" style="padding: 5px 10px; font-size: 11px; border-radius: 8px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; box-shadow: none;" title="ซิงค์ข้อมูลล่าสุดกับ Google Sheets">
+                    <i class="fa-solid fa-arrows-rotate"></i> ซิงค์ข้อมูลใหม่
+                  </button>
+                </div>
               </div>
               
               <div class="table-container">
