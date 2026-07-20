@@ -48,7 +48,7 @@
     };
 
     // REST API Configuration for GitHub Pages hosting
-    const DEFAULT_BACKEND_URL = "https://script.google.com/macros/s/AKfycbzNxrOkhZG9C2h20hB3oGc4Mm16uRlcjUH8o2N4R6XfDR1yF-UBdpbdOPUZJWgRoxei/exec"; // ลิงก์ Web App API ของคุณครู
+    const DEFAULT_BACKEND_URL = "https://script.google.com/macros/s/AKfycbAVydABZNldI9P_G797-lIB4iLpbhXH5zaUlxcuHvAnlu8dj1R3mBtXSq_InEWFS5h/exec"; // ลิงก์ Web App API ของคุณครู
     
     function getBackendURL() {
       return SafeStorage.getItem("backend_web_app_url") || DEFAULT_BACKEND_URL;
