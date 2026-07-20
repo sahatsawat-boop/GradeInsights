@@ -919,17 +919,56 @@
         padding: 0 !important;
         margin-bottom: 15px !important;
       }
-      .score-table th {
+      .score-table th, .report-table th {
         background: #f1f5f9 !important;
         color: black !important;
         border: 1px solid #94a3b8 !important;
       }
-      .score-table td {
+      .score-table td, .report-table td {
         border: 1px solid #94a3b8 !important;
+        background: transparent !important;
+        color: black !important;
       }
       .chart-box {
         page-break-inside: avoid;
       }
+      .teacher-main-content {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+      }
+      #teacher-workspace-title, #sync-status, .teacher-sidebar {
+        display: none !important;
+      }
+    }
+
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    .report-table th, .report-table td {
+      border: 1px solid var(--card-border);
+      padding: 8px 10px;
+      text-align: center;
+      color: var(--text-main);
+    }
+    .report-table th {
+      background: rgba(var(--primary-rgb), 0.05);
+      font-weight: 600;
+    }
+    .report-table td.text-left {
+      text-align: left;
+    }
+    .report-editable-subject {
+      cursor: pointer;
+      border-bottom: 1px dashed var(--primary);
+      padding-bottom: 2px;
+      transition: background 0.2s;
+    }
+    .report-editable-subject:hover {
+      background: rgba(var(--primary-rgb), 0.1);
     }
 
     /* -------------------------------------------------------------
@@ -1242,6 +1281,9 @@
           <button class="sidebar-item" id="snav-gradebook" onclick="switchTeacherTab('gradebook')">
             <i class="fa-solid fa-book-open"></i> สมุดเกรด (Gradebook)
           </button>
+          <button class="sidebar-item" id="snav-summary-report" onclick="switchTeacherTab('summary-report')">
+            <i class="fa-solid fa-square-poll-vertical"></i> สรุปผลสัมฤทธิ์
+          </button>
           <button class="sidebar-item" id="snav-settings" onclick="switchTeacherTab('settings')">
             <i class="fa-solid fa-gear"></i> ตั้งค่าการเชื่อมต่อ
           </button>
@@ -1419,6 +1461,115 @@
               <button class="role-btn btn-primary" onclick="saveConnectionSettings()" style="margin-top: 10px; padding: 10px 20px; font-size: 13px; border-radius: 8px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
                 <i class="fa-solid fa-floppy-disk"></i> บันทึกการตั้งค่า
               </button>
+            </div>
+          </div>
+
+          <!-- ============================================
+               TAB E: SUMMARY REPORT
+               ============================================ -->
+          <div id="teacher-tab-summary-report" class="teacher-tab">
+            <div class="card no-print" style="margin-bottom: 20px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                  <h3><i class="fa-solid fa-square-poll-vertical"></i> รายงานสรุปผลสัมฤทธิ์ทางการเรียน</h3>
+                  <p style="font-size: 13px; color: var(--text-muted); margin: 5px 0 0 0;">
+                    ระบบคำนวณและดึงจำนวนระดับผลการเรียนอัตโนมัติ คุณครูสามารถคลิกแก้ไขชื่อวิชา/รหัสวิชาได้โดยตรงจากตาราง
+                  </p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                  <button class="role-btn btn-secondary" onclick="window.print()" style="padding: 10px 15px; font-size: 13px; border-radius: 8px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-print"></i> พิมพ์รายงาน (PDF)
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Printable A4 Area -->
+            <div class="printable-report-area">
+              <div class="report-header" style="text-align: center; margin-bottom: 20px;">
+                <h2 style="font-size: 18px; font-weight: 700; margin-bottom: 5px; color: var(--text-main);">รายงานผลสัมฤทธิ์ทางการเรียนและการประเมินคุณลักษณะ</h2>
+                <p style="font-size: 14px; color: var(--text-muted); margin: 0;">สรุปสถิติจำนวนระดับผลการเรียนแยกตามกลุ่มวิชาและห้องเรียน</p>
+              </div>
+
+              <!-- Table 1: Grade Summary -->
+              <div class="card" style="padding: 20px; margin-bottom: 30px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow-x: auto;">
+                <h4 style="font-size: 15px; font-weight: 600; margin-bottom: 15px; border-left: 4px solid var(--primary); padding-left: 10px; color: var(--text-main);">
+                  1. สรุปผลการตัดสินผลการเรียน
+                </h4>
+                <table class="report-table" style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                  <thead>
+                    <tr>
+                      <th rowspan="2" style="width: 50px;">ที่</th>
+                      <th rowspan="2">วิชา / รหัส</th>
+                      <th rowspan="2" style="width: 100px;">รวม (คน)</th>
+                      <th colspan="10">ระดับผลการเรียน</th>
+                    </tr>
+                    <tr>
+                      <th style="width: 50px;">4</th>
+                      <th style="width: 50px;">3.5</th>
+                      <th style="width: 50px;">3</th>
+                      <th style="width: 50px;">2.5</th>
+                      <th style="width: 50px;">2</th>
+                      <th style="width: 50px;">1.5</th>
+                      <th style="width: 50px;">1</th>
+                      <th style="width: 50px;">0</th>
+                      <th style="width: 50px;">ร</th>
+                      <th style="width: 50px;">มส</th>
+                    </tr>
+                  </thead>
+                  <tbody id="report-grade-tbody">
+                    <!-- Dynamic Rows -->
+                  </tbody>
+                  <tfoot>
+                    <tr id="report-grade-total-row" style="font-weight: bold; background: rgba(var(--primary-rgb), 0.05);">
+                      <!-- Calculated Totals -->
+                    </tr>
+                    <tr id="report-grade-percentage-row" style="font-weight: bold; background: rgba(var(--primary-rgb), 0.02);">
+                      <!-- Calculated Percentages -->
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <!-- Table 2: Evaluation Summary -->
+              <div class="card" style="padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow-x: auto;">
+                <h4 style="font-size: 15px; font-weight: 600; margin-bottom: 15px; border-left: 4px solid var(--primary); padding-left: 10px; color: var(--text-main);">
+                  2. สรุปผลการประเมินการอ่าน คิดวิเคราะห์ เขียน และคุณลักษณะอันพึงประสงค์
+                </h4>
+                <table class="report-table" style="width: 100%; border-collapse: collapse; min-width: 800px;">
+                  <thead>
+                    <tr>
+                      <th rowspan="2" style="width: 50px;">ที่</th>
+                      <th rowspan="2">วิชา / รหัส</th>
+                      <th rowspan="2" style="width: 100px;">รวม (คน)</th>
+                      <th colspan="4">การอ่าน/คิดวิเคราะห์/เขียน</th>
+                      <th colspan="4">คุณลักษณะอันพึงประสงค์</th>
+                      <th rowspan="2">หมายเหตุ</th>
+                    </tr>
+                    <tr>
+                      <th style="width: 50px;">3</th>
+                      <th style="width: 50px;">2</th>
+                      <th style="width: 50px;">1</th>
+                      <th style="width: 50px;">0</th>
+                      <th style="width: 50px;">3</th>
+                      <th style="width: 50px;">2</th>
+                      <th style="width: 50px;">1</th>
+                      <th style="width: 50px;">0</th>
+                    </tr>
+                  </thead>
+                  <tbody id="report-eval-tbody">
+                    <!-- Dynamic Rows -->
+                  </tbody>
+                  <tfoot>
+                    <tr id="report-eval-total-row" style="font-weight: bold; background: rgba(var(--primary-rgb), 0.05);">
+                      <!-- Calculated Totals -->
+                    </tr>
+                    <tr id="report-eval-percentage-row" style="font-weight: bold; background: rgba(var(--primary-rgb), 0.02);">
+                      <!-- Calculated Percentages -->
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -2502,6 +2653,8 @@
           title.textContent = "ระบบสแกนงานค้างและแจ้งเตือนเด็ก";
         } else if (tab === "gradebook") {
           title.textContent = "ตารางรายงานคะแนนนักเรียน";
+        } else if (tab === "summary-report") {
+          title.textContent = "รายงานสรุปผลสัมฤทธิ์ทางการเรียน";
         } else if (tab === "settings") {
           title.textContent = "ตั้งค่าการเชื่อมต่อ";
         }
@@ -2514,6 +2667,8 @@
         renderTeacherAlertsTab();
       } else if (tab === "gradebook") {
         renderTeacherGradebookTab();
+      } else if (tab === "summary-report") {
+        renderTeacherSummaryReport();
       } else if (tab === "settings") {
         const urlInput = document.getElementById("settings-web-app-url");
         if (urlInput) {
@@ -3706,6 +3861,264 @@
         toast.style.transition = 'all 0.3s ease';
         setTimeout(() => toast.remove(), 300);
       }, 3500);
+    }
+
+    function renderTeacherSummaryReport() {
+      const gradeTbody = document.getElementById("report-grade-tbody");
+      const evalTbody = document.getElementById("report-eval-tbody");
+      
+      const gradeTotalRow = document.getElementById("report-grade-total-row");
+      const gradePercentageRow = document.getElementById("report-grade-percentage-row");
+      const evalTotalRow = document.getElementById("report-eval-total-row");
+      const evalPercentageRow = document.getElementById("report-eval-percentage-row");
+
+      if (!gradeTbody || !evalTbody) return;
+
+      gradeTbody.innerHTML = "";
+      evalTbody.innerHTML = "";
+
+      if (dbSheetNames.length === 0) {
+        gradeTbody.innerHTML = `<tr><td colspan="13" style="padding:20px; color:var(--text-muted);">ไม่พบข้อมูลแผ่นงานวิชาใดๆ</td></tr>`;
+        evalTbody.innerHTML = `<tr><td colspan="12" style="padding:20px; color:var(--text-muted);">ไม่พบข้อมูลแผ่นงานวิชาใดๆ</td></tr>`;
+        return;
+      }
+
+      // Load custom subject names from storage
+      let customNames = {};
+      try {
+        const stored = SafeStorage.getItem("custom_subject_names");
+        if (stored) customNames = JSON.parse(stored);
+      } catch (e) {}
+
+      // Overall sums
+      let grandTotalStudents = 0;
+      const grandGradeCounts = { "4": 0, "3.5": 0, "3": 0, "2.5": 0, "2": 0, "1.5": 0, "1": 0, "0": 0, "ร": 0, "มส": 0 };
+      const grandEvalReadingCounts = { "3": 0, "2": 0, "1": 0, "0": 0 };
+      const grandEvalCharacterCounts = { "3": 0, "2": 0, "1": 0, "0": 0 };
+
+      dbSheetNames.forEach((sheetName, index) => {
+        const students = dbGrades.filter(st => st._sheetName === sheetName);
+        const totalStudents = students.length;
+        grandTotalStudents += totalStudents;
+
+        // 1. Resolve Subject Name
+        let displayName = customNames[sheetName];
+        if (!displayName) {
+          // Try to build default: "CODE รายวิชาNAME"
+          if (totalStudents > 0) {
+            const first = students[0];
+            if (first.subject_code && first.subject_name) {
+              displayName = `${first.subject_code} รายวิชา${first.subject_name}`;
+            }
+          }
+          if (!displayName) displayName = sheetName;
+        }
+
+        // 2. Count grades
+        const gradeCounts = { "4": 0, "3.5": 0, "3": 0, "2.5": 0, "2": 0, "1.5": 0, "1": 0, "0": 0, "ร": 0, "มส": 0 };
+        const headers = dbSheetHeadersMap[sheetName] || dbHeaders;
+
+        students.forEach(st => {
+          // Detect string inputs for ร and มส in scores
+          const isR = String(st.midterm_score).trim() === "ร" || String(st.final_score).trim() === "ร";
+          const isMS = String(st.midterm_score).trim() === "มส" || String(st.final_score).trim() === "มส";
+
+          if (isR) {
+            gradeCounts["ร"]++;
+            grandGradeCounts["ร"]++;
+          } else if (isMS) {
+            gradeCounts["มส"]++;
+            grandGradeCounts["มส"]++;
+          } else {
+            const calc = calculateScoresAndGrades(st, headers);
+            const g = String(calc.grade);
+            if (gradeCounts.hasOwnProperty(g)) {
+              gradeCounts[g]++;
+              grandGradeCounts[g]++;
+            } else {
+              gradeCounts["0"]++;
+              grandGradeCounts["0"]++;
+            }
+          }
+        });
+
+        // 3. Count Reading and Character evaluations
+        const evalReadingCounts = { "3": 0, "2": 0, "1": 0, "0": 0 };
+        const evalCharacterCounts = { "3": 0, "2": 0, "1": 0, "0": 0 };
+
+        // Try to locate evaluation columns
+        const readCol = headers.find(h => h.includes("การอ่าน") || h.toLowerCase().includes("reading") || h.includes("คิดวิเคราะห์"));
+        const charCol = headers.find(h => h.includes("คุณลักษณะ") || h.toLowerCase().includes("behavior") || h.toLowerCase().includes("desirable"));
+
+        students.forEach(st => {
+          if (readCol && st[readCol] !== undefined && st[readCol] !== null && st[readCol] !== "") {
+            const val = String(st[readCol]).trim();
+            if (evalReadingCounts.hasOwnProperty(val)) {
+              evalReadingCounts[val]++;
+              grandEvalReadingCounts[val]++;
+            }
+          }
+          if (charCol && st[charCol] !== undefined && st[charCol] !== null && st[charCol] !== "") {
+            const val = String(st[charCol]).trim();
+            if (evalCharacterCounts.hasOwnProperty(val)) {
+              evalCharacterCounts[val]++;
+              grandEvalCharacterCounts[val]++;
+            }
+          }
+        });
+
+        // Render Table 1 row
+        const tr1 = document.createElement("tr");
+        tr1.innerHTML = `
+          <td>${index + 1}</td>
+          <td class="text-left"><span class="report-editable-subject" onclick="editReportSubject('${sheetName}')" title="คลิกเพื่อแก้ไขชื่อวิชา">${displayName}</span></td>
+          <td>${totalStudents}</td>
+          <td>${gradeCounts["4"] || "-"}</td>
+          <td>${gradeCounts["3.5"] || "-"}</td>
+          <td>${gradeCounts["3"] || "-"}</td>
+          <td>${gradeCounts["2.5"] || "-"}</td>
+          <td>${gradeCounts["2"] || "-"}</td>
+          <td>${gradeCounts["1.5"] || "-"}</td>
+          <td>${gradeCounts["1"] || "-"}</td>
+          <td>${gradeCounts["0"] || "-"}</td>
+          <td>${gradeCounts["ร"] || "-"}</td>
+          <td>${gradeCounts["มส"] || "-"}</td>
+        `;
+        gradeTbody.appendChild(tr1);
+
+        // Render Table 2 row
+        const tr2 = document.createElement("tr");
+        tr2.innerHTML = `
+          <td>${index + 1}</td>
+          <td class="text-left"><span class="report-editable-subject" onclick="editReportSubject('${sheetName}')" title="คลิกเพื่อแก้ไขชื่อวิชา">${displayName}</span></td>
+          <td>${totalStudents}</td>
+          <td>${readCol ? (evalReadingCounts["3"] || "-") : "ไม่มีข้อมูล"}</td>
+          <td>${readCol ? (evalReadingCounts["2"] || "-") : "ไม่มีข้อมูล"}</td>
+          <td>${readCol ? (evalReadingCounts["1"] || "-") : "ไม่มีข้อมูล"}</td>
+          <td>${readCol ? (evalReadingCounts["0"] || "-") : "ไม่มีข้อมูล"}</td>
+          <td>${charCol ? (evalCharacterCounts["3"] || "-") : "ไม่มีข้อมูล"}</td>
+          <td>${charCol ? (evalCharacterCounts["2"] || "-") : "ไม่มีข้อมูล"}</td>
+          <td>${charCol ? (evalCharacterCounts["1"] || "-") : "ไม่มีข้อมูล"}</td>
+          <td>${charCol ? (evalCharacterCounts["0"] || "-") : "ไม่มีข้อมูล"}</td>
+          <td></td>
+        `;
+        evalTbody.appendChild(tr2);
+      });
+
+      // Render Table 1 totals
+      gradeTotalRow.innerHTML = `
+        <td colspan="2">รวม</td>
+        <td>${grandTotalStudents}</td>
+        <td>${grandGradeCounts["4"] || "-"}</td>
+        <td>${grandGradeCounts["3.5"] || "-"}</td>
+        <td>${grandGradeCounts["3"] || "-"}</td>
+        <td>${grandGradeCounts["2.5"] || "-"}</td>
+        <td>${grandGradeCounts["2"] || "-"}</td>
+        <td>${grandGradeCounts["1.5"] || "-"}</td>
+        <td>${grandGradeCounts["1"] || "-"}</td>
+        <td>${grandGradeCounts["0"] || "-"}</td>
+        <td>${grandGradeCounts["ร"] || "-"}</td>
+        <td>${grandGradeCounts["มส"] || "-"}</td>
+      `;
+
+      // Render Table 1 percentages
+      const pctGrade4 = grandTotalStudents > 0 ? ((grandGradeCounts["4"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctGrade3_5 = grandTotalStudents > 0 ? ((grandGradeCounts["3.5"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctGrade3 = grandTotalStudents > 0 ? ((grandGradeCounts["3"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctGrade2_5 = grandTotalStudents > 0 ? ((grandGradeCounts["2.5"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctGrade2 = grandTotalStudents > 0 ? ((grandGradeCounts["2"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctGrade1_5 = grandTotalStudents > 0 ? ((grandGradeCounts["1.5"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctGrade1 = grandTotalStudents > 0 ? ((grandGradeCounts["1"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctGrade0 = grandTotalStudents > 0 ? ((grandGradeCounts["0"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctGradeR = grandTotalStudents > 0 ? ((grandGradeCounts["ร"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctGradeMS = grandTotalStudents > 0 ? ((grandGradeCounts["มส"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+
+      gradePercentageRow.innerHTML = `
+        <td colspan="2">ร้อยละ</td>
+        <td>100</td>
+        <td>${pctGrade4 !== "0.00" ? pctGrade4 : "-"}</td>
+        <td>${pctGrade3_5 !== "0.00" ? pctGrade3_5 : "-"}</td>
+        <td>${pctGrade3 !== "0.00" ? pctGrade3 : "-"}</td>
+        <td>${pctGrade2_5 !== "0.00" ? pctGrade2_5 : "-"}</td>
+        <td>${pctGrade2 !== "0.00" ? pctGrade2 : "-"}</td>
+        <td>${pctGrade1_5 !== "0.00" ? pctGrade1_5 : "-"}</td>
+        <td>${pctGrade1 !== "0.00" ? pctGrade1 : "-"}</td>
+        <td>${pctGrade0 !== "0.00" ? pctGrade0 : "-"}</td>
+        <td>${pctGradeR !== "0.00" ? pctGradeR : "-"}</td>
+        <td>${pctGradeMS !== "0.00" ? pctGradeMS : "-"}</td>
+      `;
+
+      // Render Table 2 totals
+      evalTotalRow.innerHTML = `
+        <td colspan="2">รวม</td>
+        <td>${grandTotalStudents}</td>
+        <td>${grandEvalReadingCounts["3"] || "-"}</td>
+        <td>${grandEvalReadingCounts["2"] || "-"}</td>
+        <td>${grandEvalReadingCounts["1"] || "-"}</td>
+        <td>${grandEvalReadingCounts["0"] || "-"}</td>
+        <td>${grandEvalCharacterCounts["3"] || "-"}</td>
+        <td>${grandEvalCharacterCounts["2"] || "-"}</td>
+        <td>${grandEvalCharacterCounts["1"] || "-"}</td>
+        <td>${grandEvalCharacterCounts["0"] || "-"}</td>
+        <td></td>
+      `;
+
+      // Render Table 2 percentages
+      const pctRead3 = grandTotalStudents > 0 ? ((grandEvalReadingCounts["3"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctRead2 = grandTotalStudents > 0 ? ((grandEvalReadingCounts["2"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctRead1 = grandTotalStudents > 0 ? ((grandEvalReadingCounts["1"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctRead0 = grandTotalStudents > 0 ? ((grandEvalReadingCounts["0"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+
+      const pctChar3 = grandTotalStudents > 0 ? ((grandEvalCharacterCounts["3"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctChar2 = grandTotalStudents > 0 ? ((grandEvalCharacterCounts["2"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctChar1 = grandTotalStudents > 0 ? ((grandEvalCharacterCounts["1"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctChar0 = grandTotalStudents > 0 ? ((grandEvalCharacterCounts["0"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+
+      evalPercentageRow.innerHTML = `
+        <td colspan="2">ร้อยละ</td>
+        <td>100</td>
+        <td>${pctRead3 !== "0.00" ? pctRead3 : "-"}</td>
+        <td>${pctRead2 !== "0.00" ? pctRead2 : "-"}</td>
+        <td>${pctRead1 !== "0.00" ? pctRead1 : "-"}</td>
+        <td>${pctRead0 !== "0.00" ? pctRead0 : "-"}</td>
+        <td>${pctChar3 !== "0.00" ? pctChar3 : "-"}</td>
+        <td>${pctChar2 !== "0.00" ? pctChar2 : "-"}</td>
+        <td>${pctChar1 !== "0.00" ? pctChar1 : "-"}</td>
+        <td>${pctChar0 !== "0.00" ? pctChar0 : "-"}</td>
+        <td></td>
+      `;
+    }
+
+    function editReportSubject(sheetName) {
+      let customNames = {};
+      try {
+        const stored = SafeStorage.getItem("custom_subject_names");
+        if (stored) customNames = JSON.parse(stored);
+      } catch (e) {}
+
+      let defaultVal = customNames[sheetName];
+      if (!defaultVal) {
+        const students = dbGrades.filter(st => st._sheetName === sheetName);
+        if (students.length > 0) {
+          const first = students[0];
+          if (first.subject_code && first.subject_name) {
+            defaultVal = `${first.subject_code} รายวิชา${first.subject_name}`;
+          }
+        }
+        if (!defaultVal) defaultVal = sheetName;
+      }
+
+      const newVal = prompt(`แก้ไขชื่อรายวิชาสำหรับรายงานการสรุปผลสัมฤทธิ์:\nชีตเดิม: ${sheetName}`, defaultVal);
+      if (newVal !== null) {
+        const trimmed = newVal.trim();
+        if (trimmed) {
+          customNames[sheetName] = trimmed;
+        } else {
+          delete customNames[sheetName];
+        }
+        SafeStorage.setItem("custom_subject_names", JSON.stringify(customNames));
+        renderTeacherSummaryReport();
+      }
     }
 
     function copyAppsScriptCode() {
