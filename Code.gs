@@ -78,6 +78,11 @@ function doPost(e) {
     } else if (action === "addStudentsBulk") {
       var studentsListObj = typeof params.studentsList === "string" ? JSON.parse(params.studentsList) : params.studentsList;
       result = addStudentsBulkAPI(studentsListObj);
+    } else if (action === "saveCustomSubjectName") {
+      result = saveCustomSubjectNameAPI(params.sheetName, params.customName);
+    } else if (action === "saveSummaryReport") {
+      var reportData = typeof params.reportData === "string" ? JSON.parse(params.reportData) : params.reportData;
+      result = saveSummaryReportAPI(reportData);
     } else if (action === "createSampleData") {
       result = createSampleDataAPI();
     } else {
@@ -223,7 +228,8 @@ function fetchAllGradesAcrossSheetsAPI() {
       classrooms: Object.keys(classroomsSet).sort(),
       sheetHeadersMap: sheetHeadersMap,
       allHeaders: Object.keys(allHeadersSet),
-      teacherPin: getTeacherPIN()
+      teacherPin: getTeacherPIN(),
+      customSubjectNames: getCustomSubjectNames()
     };
   } catch (err) {
     return {
@@ -742,5 +748,244 @@ function deleteStudentAPI(sheetName, studentId, subjectCode) {
     }
   } catch (err) {
     return {status: "error", message: "เกิดข้อผิดพลาดในการลบนักเรียน: " + err.message};
+  }
+}
+
+/**
+ * ดึงข้อมูลชื่อวิชาที่ครูตั้งค่าเองในชีท Config
+ */
+function getCustomSubjectNames() {
+  var customNames = {};
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Config");
+    if (!sheet) return customNames;
+    
+    var data = sheet.getDataRange().getValues();
+    for (var i = 0; i < data.length; i++) {
+      var key = String(data[i][0]).trim();
+      var val = String(data[i][1]).trim();
+      if (key.indexOf("subjectname:") === 0) {
+        var sheetName = key.substring("subjectname:".length);
+        customNames[sheetName] = val;
+      }
+    }
+  } catch (e) {}
+  return customNames;
+}
+
+/**
+ * บันทึกชื่อวิชาที่ครูตั้งค่าเองลงในชีท Config
+ */
+function saveCustomSubjectNameAPI(sheetName, customName) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName("Config");
+    if (!sheet) {
+      sheet = ss.insertSheet("Config");
+    }
+    
+    var data = sheet.getDataRange().getValues();
+    var keyToFind = "subjectname:" + sheetName;
+    var targetRow = -1;
+    
+    for (var i = 0; i < data.length; i++) {
+      if (String(data[i][0]).trim() === keyToFind) {
+        targetRow = i + 1; // 1-based index
+        break;
+      }
+    }
+    
+    if (customName && customName.trim()) {
+      if (targetRow !== -1) {
+        sheet.getRange(targetRow, 2).setValue(customName.trim());
+      } else {
+        sheet.appendRow([keyToFind, customName.trim()]);
+      }
+    } else {
+      // If customName is empty, delete the row
+      if (targetRow !== -1) {
+        sheet.deleteRow(targetRow);
+      }
+    }
+    return { status: "success" };
+  } catch (err) {
+    return { status: "error", message: "เกิดข้อผิดพลาดในการบันทึกชื่อวิชา: " + err.message };
+  }
+}
+
+/**
+ * บันทึกรายงานสรุปผลสัมฤทธิ์ทางการเรียนลงในแผ่นงานแยกต่างหาก (ชีท "สรุปผลสัมฤทธิ์")
+ */
+function saveSummaryReportAPI(data) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetName = "สรุปผลสัมฤทธิ์";
+    var sheet = ss.getSheetByName(sheetName);
+    if (sheet) {
+      sheet.clear();
+      // Remove all merges
+      var maxRows = sheet.getMaxRows();
+      var maxCols = sheet.getMaxColumns();
+      sheet.getRange(1, 1, maxRows, maxCols).breakApart();
+    } else {
+      sheet = ss.insertSheet(sheetName);
+    }
+    
+    // Set active sheet
+    sheet.showSheet();
+    
+    // Title
+    sheet.getRange("A1").setValue("รายงานผลสัมฤทธิ์ทางการเรียนและการประเมินคุณลักษณะ").setFontSize(16).setFontWeight("bold");
+    sheet.getRange("A2").setValue("สรุปสถิติจำนวนระดับผลการเรียนแยกตามกลุ่มวิชาและห้องเรียน (อัปเดตเมื่อ " + new Date().toLocaleString("th-TH") + ")").setFontSize(11).setFontColor("#475569");
+    
+    var currentRow = 4;
+    
+    // ------------------ Table 1: Grade Summary ------------------
+    sheet.getRange(currentRow, 1).setValue("1. สรุปผลการตัดสินผลการเรียน").setFontSize(12).setFontWeight("bold");
+    currentRow++;
+    
+    // Headers
+    sheet.getRange(currentRow, 1, 2, 1).merge().setValue("ที่").setHorizontalAlignment("center").setVerticalAlignment("middle");
+    sheet.getRange(currentRow, 2, 2, 1).merge().setValue("วิชา / รหัส").setHorizontalAlignment("left").setVerticalAlignment("middle");
+    sheet.getRange(currentRow, 3, 2, 1).merge().setValue("รวม (คน)").setHorizontalAlignment("center").setVerticalAlignment("middle");
+    sheet.getRange(currentRow, 4, 1, 10).merge().setValue("ระดับผลการเรียน").setHorizontalAlignment("center");
+    
+    var gradesHeader = ["4", "3.5", "3", "2.5", "2", "1.5", "1", "0", "ร", "มส"];
+    for (var i = 0; i < gradesHeader.length; i++) {
+      sheet.getRange(currentRow + 1, 4 + i).setValue(gradesHeader[i]).setHorizontalAlignment("center");
+    }
+    
+    sheet.getRange(currentRow, 1, 2, 13).setBackground("#f1f5f9").setFontWeight("bold").setBorder(true, true, true, true, true, true);
+    currentRow += 2;
+    
+    // Rows
+    data.gradeRows.forEach(function(row) {
+      sheet.getRange(currentRow, 1).setValue(row.no).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 2).setValue(row.subject).setHorizontalAlignment("left");
+      sheet.getRange(currentRow, 3).setValue(row.total).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 4).setValue(row.g4).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 5).setValue(row.g3_5).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 6).setValue(row.g3).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 7).setValue(row.g2_5).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 8).setValue(row.g2).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 9).setValue(row.g1_5).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 10).setValue(row.g1).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 11).setValue(row.g0).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 12).setValue(row.gR).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 13).setValue(row.gMS).setHorizontalAlignment("center");
+      
+      sheet.getRange(currentRow, 1, 1, 13).setBorder(true, true, true, true, true, true);
+      currentRow++;
+    });
+    
+    // Totals
+    sheet.getRange(currentRow, 1, 1, 2).merge().setValue("รวม").setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 3).setValue(data.gradeTotals.total).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 4).setValue(data.gradeTotals.g4).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 5).setValue(data.gradeTotals.g3_5).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 6).setValue(data.gradeTotals.g3).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 7).setValue(data.gradeTotals.g2_5).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 8).setValue(data.gradeTotals.g2).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 9).setValue(data.gradeTotals.g1_5).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 10).setValue(data.gradeTotals.g1).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 11).setValue(data.gradeTotals.g0).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 12).setValue(data.gradeTotals.gR).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 13).setValue(data.gradeTotals.gMS).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 1, 1, 13).setBackground("#f8fafc").setFontWeight("bold").setBorder(true, true, true, true, true, true);
+    currentRow++;
+    
+    // Percentages
+    sheet.getRange(currentRow, 1, 1, 2).merge().setValue("ร้อยละ").setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 3).setValue(data.gradePcts.total).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 4).setValue(data.gradePcts.g4).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 5).setValue(data.gradePcts.g3_5).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 6).setValue(data.gradePcts.g3).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 7).setValue(data.gradePcts.g2_5).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 8).setValue(data.gradePcts.g2).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 9).setValue(data.gradePcts.g1_5).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 10).setValue(data.gradePcts.g1).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 11).setValue(data.gradePcts.g0).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 12).setValue(data.gradePcts.gR).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 13).setValue(data.gradePcts.gMS).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 1, 1, 13).setBackground("#e2e8f0").setFontWeight("bold").setBorder(true, true, true, true, true, true);
+    
+    currentRow += 3;
+    
+    // ------------------ Table 2: Evaluation Summary ------------------
+    sheet.getRange(currentRow, 1).setValue("2. สรุปผลการประเมินการอ่าน คิดวิเคราะห์ เขียน และคุณลักษณะอันพึงประสงค์").setFontSize(12).setFontWeight("bold");
+    currentRow++;
+    
+    // Headers
+    sheet.getRange(currentRow, 1, 2, 1).merge().setValue("ที่").setHorizontalAlignment("center").setVerticalAlignment("middle");
+    sheet.getRange(currentRow, 2, 2, 1).merge().setValue("วิชา / รหัส").setHorizontalAlignment("left").setVerticalAlignment("middle");
+    sheet.getRange(currentRow, 3, 2, 1).merge().setValue("รวม (คน)").setHorizontalAlignment("center").setVerticalAlignment("middle");
+    sheet.getRange(currentRow, 4, 1, 4).merge().setValue("การอ่าน/คิดวิเคราะห์/เขียน").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 8, 1, 4).merge().setValue("คุณลักษณะอันพึงประสงค์").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 12, 2, 1).merge().setValue("หมายเหตุ").setHorizontalAlignment("center").setVerticalAlignment("middle");
+    
+    var evalHeaders = ["3", "2", "1", "0", "3", "2", "1", "0"];
+    for (var j = 0; j < evalHeaders.length; j++) {
+      sheet.getRange(currentRow + 1, 4 + j).setValue(evalHeaders[j]).setHorizontalAlignment("center");
+    }
+    
+    sheet.getRange(currentRow, 1, 2, 12).setBackground("#f1f5f9").setFontWeight("bold").setBorder(true, true, true, true, true, true);
+    currentRow += 2;
+    
+    // Rows
+    data.evalRows.forEach(function(row) {
+      sheet.getRange(currentRow, 1).setValue(row.no).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 2).setValue(row.subject).setHorizontalAlignment("left");
+      sheet.getRange(currentRow, 3).setValue(row.total).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 4).setValue(row.r3).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 5).setValue(row.r2).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 6).setValue(row.r1).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 7).setValue(row.r0).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 8).setValue(row.c3).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 9).setValue(row.c2).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 10).setValue(row.c1).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 11).setValue(row.c0).setHorizontalAlignment("center");
+      sheet.getRange(currentRow, 12).setValue(row.note).setHorizontalAlignment("center");
+      
+      sheet.getRange(currentRow, 1, 1, 12).setBorder(true, true, true, true, true, true);
+      currentRow++;
+    });
+    
+    // Totals
+    sheet.getRange(currentRow, 1, 1, 2).merge().setValue("รวม").setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 3).setValue(data.evalTotals.total).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 4).setValue(data.evalTotals.r3).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 5).setValue(data.evalTotals.r2).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 6).setValue(data.evalTotals.r1).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 7).setValue(data.evalTotals.r0).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 8).setValue(data.evalTotals.c3).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 9).setValue(data.evalTotals.c2).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 10).setValue(data.evalTotals.c1).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 11).setValue(data.evalTotals.c0).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 12).setValue("").setFontWeight("bold");
+    sheet.getRange(currentRow, 1, 1, 12).setBackground("#f8fafc").setFontWeight("bold").setBorder(true, true, true, true, true, true);
+    currentRow++;
+    
+    // Percentages
+    sheet.getRange(currentRow, 1, 1, 2).merge().setValue("ร้อยละ").setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 3).setValue(data.evalPcts.total).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 4).setValue(data.evalPcts.r3).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 5).setValue(data.evalPcts.r2).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 6).setValue(data.evalPcts.r1).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 7).setValue(data.evalPcts.r0).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 8).setValue(data.evalPcts.c3).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 9).setValue(data.evalPcts.c2).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 10).setValue(data.evalPcts.c1).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 11).setValue(data.evalPcts.c0).setFontWeight("bold").setHorizontalAlignment("center");
+    sheet.getRange(currentRow, 12).setValue("").setFontWeight("bold");
+    sheet.getRange(currentRow, 1, 1, 12).setBackground("#e2e8f0").setFontWeight("bold").setBorder(true, true, true, true, true, true);
+    
+    // Formatting
+    sheet.autoResizeColumns(1, 13);
+    sheet.setColumnWidth(2, 280); // Expand subject column
+    
+    return { status: "success", message: "บันทึกรายงานสรุปผลสัมฤทธิ์ลงในชีตเรียบร้อยแล้ว!" };
+  } catch (err) {
+    return { status: "error", message: "เกิดข้อผิดพลาดในการบันทึกรายงาน: " + err.message };
   }
 }

@@ -1477,6 +1477,9 @@
                   </p>
                 </div>
                 <div style="display: flex; gap: 10px;">
+                  <button class="role-btn btn-primary" onclick="exportSummaryReportToSheets()" style="padding: 10px 15px; font-size: 13px; border-radius: 8px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> บันทึกลง Google Sheets (แยกแท็บ)
+                  </button>
                   <button class="role-btn btn-secondary" onclick="window.print()" style="padding: 10px 15px; font-size: 13px; border-radius: 8px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
                     <i class="fa-solid fa-print"></i> พิมพ์รายงาน (PDF)
                   </button>
@@ -2090,6 +2093,7 @@
 
     let dbSheetHeadersMap = {};
     let dbAllHeaders = [];
+    let dbCustomSubjectNames = {};
 
     function syncTeacherGrades() {
       const syncStatus = document.getElementById("sync-status");
@@ -2108,6 +2112,7 @@
               dbAllHeaders = res.allHeaders || [];
               dbSheetHeadersMap = res.sheetHeadersMap || {};
               dbTeacherPin = res.teacherPin || dbTeacherPin;
+              dbCustomSubjectNames = res.customSubjectNames || {};
               
               dbHeaders = dbAllHeaders; // สำหรับการทำงานทั่วไป
               
@@ -3863,6 +3868,8 @@
       }, 3500);
     }
 
+    let lastReportData = null;
+
     function renderTeacherSummaryReport() {
       const gradeTbody = document.getElementById("report-grade-tbody");
       const evalTbody = document.getElementById("report-eval-tbody");
@@ -3880,14 +3887,25 @@
       if (dbSheetNames.length === 0) {
         gradeTbody.innerHTML = `<tr><td colspan="13" style="padding:20px; color:var(--text-muted);">ไม่พบข้อมูลแผ่นงานวิชาใดๆ</td></tr>`;
         evalTbody.innerHTML = `<tr><td colspan="12" style="padding:20px; color:var(--text-muted);">ไม่พบข้อมูลแผ่นงานวิชาใดๆ</td></tr>`;
+        lastReportData = null;
         return;
       }
 
-      // Load custom subject names from storage
+      // Load custom subject names
       let customNames = {};
+      if (typeof dbCustomSubjectNames === "object") {
+        customNames = Object.assign({}, dbCustomSubjectNames);
+      }
       try {
         const stored = SafeStorage.getItem("custom_subject_names");
-        if (stored) customNames = JSON.parse(stored);
+        if (stored) {
+          const localStored = JSON.parse(stored);
+          Object.keys(localStored).forEach(key => {
+            if (!customNames[key]) {
+              customNames[key] = localStored[key];
+            }
+          });
+        }
       } catch (e) {}
 
       // Overall sums
@@ -3895,6 +3913,9 @@
       const grandGradeCounts = { "4": 0, "3.5": 0, "3": 0, "2.5": 0, "2": 0, "1.5": 0, "1": 0, "0": 0, "ร": 0, "มส": 0 };
       const grandEvalReadingCounts = { "3": 0, "2": 0, "1": 0, "0": 0 };
       const grandEvalCharacterCounts = { "3": 0, "2": 0, "1": 0, "0": 0 };
+
+      const gradeRowsArray = [];
+      const evalRowsArray = [];
 
       dbSheetNames.forEach((sheetName, index) => {
         const students = dbGrades.filter(st => st._sheetName === sheetName);
@@ -3919,7 +3940,6 @@
         const headers = dbSheetHeadersMap[sheetName] || dbHeaders;
 
         students.forEach(st => {
-          // Detect string inputs for ร and มส in scores
           const isR = String(st.midterm_score).trim() === "ร" || String(st.final_score).trim() === "ร";
           const isMS = String(st.midterm_score).trim() === "มส" || String(st.final_score).trim() === "มส";
 
@@ -3965,6 +3985,38 @@
               grandEvalCharacterCounts[val]++;
             }
           }
+        });
+
+        // Add to rows array
+        gradeRowsArray.push({
+          no: index + 1,
+          subject: displayName,
+          total: totalStudents,
+          g4: gradeCounts["4"],
+          g3_5: gradeCounts["3.5"],
+          g3: gradeCounts["3"],
+          g2_5: gradeCounts["2.5"],
+          g2: gradeCounts["2"],
+          g1_5: gradeCounts["1.5"],
+          g1: gradeCounts["1"],
+          g0: gradeCounts["0"],
+          gR: gradeCounts["ร"],
+          gMS: gradeCounts["มส"]
+        });
+
+        evalRowsArray.push({
+          no: index + 1,
+          subject: displayName,
+          total: totalStudents,
+          r3: readCol ? evalReadingCounts["3"] : "-",
+          r2: readCol ? evalReadingCounts["2"] : "-",
+          r1: readCol ? evalReadingCounts["1"] : "-",
+          r0: readCol ? evalReadingCounts["0"] : "-",
+          c3: charCol ? evalCharacterCounts["3"] : "-",
+          c2: charCol ? evalCharacterCounts["2"] : "-",
+          c1: charCol ? evalCharacterCounts["1"] : "-",
+          c0: charCol ? evalCharacterCounts["0"] : "-",
+          note: ""
         });
 
         // Render Table 1 row
@@ -4024,7 +4076,7 @@
       // Render Table 1 percentages
       const pctGrade4 = grandTotalStudents > 0 ? ((grandGradeCounts["4"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
       const pctGrade3_5 = grandTotalStudents > 0 ? ((grandGradeCounts["3.5"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
-      const pctGrade3 = grandTotalStudents > 0 ? ((grandGradeCounts["3"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
+      const pctGrade3 = grandTotalStudents > 0 ? ((grandEvalReadingCounts["3"] ? (grandGradeCounts["3"] / grandTotalStudents) : (grandGradeCounts["3"] / grandTotalStudents)) * 100).toFixed(2) : "0.00"; // just standard math
       const pctGrade2_5 = grandTotalStudents > 0 ? ((grandGradeCounts["2.5"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
       const pctGrade2 = grandTotalStudents > 0 ? ((grandGradeCounts["2"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
       const pctGrade1_5 = grandTotalStudents > 0 ? ((grandGradeCounts["1.5"] / grandTotalStudents) * 100).toFixed(2) : "0.00";
@@ -4087,16 +4139,20 @@
         <td>${pctChar0 !== "0.00" ? pctChar0 : "-"}</td>
         <td></td>
       `;
+
+      // Save to lastReportData for exporting
+      lastReportData = {
+        gradeRows: gradeRowsArray,
+        evalRows: evalRowsArray,
+        gradeTotals: { total: grandTotalStudents, g4: grandGradeCounts["4"], g3_5: grandGradeCounts["3.5"], g3: grandGradeCounts["3"], g2_5: grandGradeCounts["2.5"], g2: grandGradeCounts["2"], g1_5: grandGradeCounts["1.5"], g1: grandGradeCounts["1"], g0: grandGradeCounts["0"], gR: grandGradeCounts["ร"], gMS: grandGradeCounts["มส"] },
+        gradePcts: { total: 100, g4: pctGrade4 !== "0.00" ? pctGrade4 : "-", g3_5: pctGrade3_5 !== "0.00" ? pctGrade3_5 : "-", g3: pctGrade3 !== "0.00" ? pctGrade3 : "-", g2_5: pctGrade2_5 !== "0.00" ? pctGrade2_5 : "-", g2: pctGrade2 !== "0.00" ? pctGrade2 : "-", g1_5: pctGrade1_5 !== "0.00" ? pctGrade1_5 : "-", g1: pctGrade1 !== "0.00" ? pctGrade1 : "-", g0: pctGrade0 !== "0.00" ? pctGrade0 : "-", gR: pctGradeR !== "0.00" ? pctGradeR : "-", gMS: pctGradeMS !== "0.00" ? pctGradeMS : "-" },
+        evalTotals: { total: grandTotalStudents, r3: grandEvalReadingCounts["3"], r2: grandEvalReadingCounts["2"], r1: grandEvalReadingCounts["1"], r0: grandEvalReadingCounts["0"], c3: grandEvalCharacterCounts["3"], c2: grandEvalCharacterCounts["2"], c1: grandEvalCharacterCounts["1"], c0: grandEvalCharacterCounts["0"] },
+        evalPcts: { total: 100, r3: pctRead3 !== "0.00" ? pctRead3 : "-", r2: pctRead2 !== "0.00" ? pctRead2 : "-", r1: pctRead1 !== "0.00" ? pctRead1 : "-", r0: pctRead0 !== "0.00" ? pctRead0 : "-", c3: pctChar3 !== "0.00" ? pctChar3 : "-", c2: pctChar2 !== "0.00" ? pctChar2 : "-", c1: pctChar1 !== "0.00" ? pctChar1 : "-", c0: pctChar0 !== "0.00" ? pctChar0 : "-" }
+      };
     }
 
     function editReportSubject(sheetName) {
-      let customNames = {};
-      try {
-        const stored = SafeStorage.getItem("custom_subject_names");
-        if (stored) customNames = JSON.parse(stored);
-      } catch (e) {}
-
-      let defaultVal = customNames[sheetName];
+      let defaultVal = dbCustomSubjectNames[sheetName];
       if (!defaultVal) {
         const students = dbGrades.filter(st => st._sheetName === sheetName);
         if (students.length > 0) {
@@ -4111,13 +4167,65 @@
       const newVal = prompt(`แก้ไขชื่อรายวิชาสำหรับรายงานการสรุปผลสัมฤทธิ์:\nชีตเดิม: ${sheetName}`, defaultVal);
       if (newVal !== null) {
         const trimmed = newVal.trim();
-        if (trimmed) {
-          customNames[sheetName] = trimmed;
+        showToast("💾 กำลังบันทึกชื่อรายวิชาลงใน Google Sheets...", "info");
+        
+        if (isGAS || getBackendURL()) {
+          callBackendAPI("saveCustomSubjectName", { sheetName: sheetName, customName: trimmed })
+            .then(res => {
+              if (res && res.status === "success") {
+                showToast("✅ บันทึกชื่อวิชาลง Google Sheets สำเร็จ", "success");
+                dbCustomSubjectNames[sheetName] = trimmed;
+                
+                // Backup to SafeStorage
+                let localNames = {};
+                try {
+                  const stored = SafeStorage.getItem("custom_subject_names");
+                  if (stored) localNames = JSON.parse(stored);
+                } catch(e){}
+                if (trimmed) {
+                  localNames[sheetName] = trimmed;
+                } else {
+                  delete localNames[sheetName];
+                }
+                SafeStorage.setItem("custom_subject_names", JSON.stringify(localNames));
+                
+                renderTeacherSummaryReport();
+              } else {
+                showToast("❌ บันทึกล้มเหลว: " + res.message, "danger");
+              }
+            })
+            .catch(err => {
+              showToast("❌ เซิร์ฟเวอร์ล้มเหลว: " + err.message, "danger");
+            });
         } else {
-          delete customNames[sheetName];
+          dbCustomSubjectNames[sheetName] = trimmed;
+          renderTeacherSummaryReport();
         }
-        SafeStorage.setItem("custom_subject_names", JSON.stringify(customNames));
-        renderTeacherSummaryReport();
+      }
+    }
+
+    function exportSummaryReportToSheets() {
+      if (!lastReportData) {
+        showToast("⚠️ ไม่พบข้อมูลรายงานที่จะบันทึก", "warning");
+        return;
+      }
+      
+      showToast("📤 กำลังบันทึกรายงานสรุปผลสัมฤทธิ์ไปยัง Google Sheets...", "info");
+      
+      if (isGAS || getBackendURL()) {
+        callBackendAPI("saveSummaryReport", { reportData: JSON.stringify(lastReportData) })
+          .then(res => {
+            if (res && res.status === "success") {
+              showToast("✅ บันทึกรายงานสรุปเป็นชีตใหม่สำเร็จ!", "success");
+            } else {
+              showToast("❌ บันทึกล้มเหลว: " + res.message, "danger");
+            }
+          })
+          .catch(err => {
+            showToast("❌ เซิร์ฟเวอร์ล้มเหลว: " + err.message, "danger");
+          });
+      } else {
+        showToast("⚠️ โหมดจำลอง: บันทึกรายงานสรุปสำเร็จ (ไม่ได้เชื่อมต่อ Sheets จริง)", "warning");
       }
     }
 
