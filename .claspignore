@@ -2,6 +2,6 @@
 **/*
 
 # Do not ignore the compiled production files
-!รหัส.js
+!Code.gs
 !index.html
 !appsscript.json
