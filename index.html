@@ -1609,6 +1609,28 @@
     </div>
   </div>
 
+  <!-- EDIT SUBJECT MODAL -->
+  <div class="modal-overlay" id="edit-subject-modal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-pen-to-square"></i> แก้ไขชื่อรายวิชาสำหรับรายงาน</h3>
+        <button class="close-modal-btn" onclick="closeModal('edit-subject-modal')">&times;</button>
+      </div>
+      <form id="edit-subject-form" onsubmit="handleEditSubjectSave(event)">
+        <input type="hidden" id="edit-subject-sheet-name">
+        <div class="form-group">
+          <label id="edit-subject-sheet-label" style="font-weight: bold; font-size: 13px; color: var(--text-muted); display: block; margin-bottom: 10px;"></label>
+          <label for="edit-subject-display-name">พิมพ์ชื่อ/รหัสรายวิชาที่ต้องการให้แสดงในรายงาน:</label>
+          <input type="text" id="edit-subject-display-name" required placeholder="เช่น ว30285 รายวิชาการเขียนโปรแกรมเบื้องต้น 1" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--card-border); background: rgba(255,255,255,0.4); color: var(--text-main); font-size: 13px; outline: none;" autocomplete="off">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary role-btn" onclick="closeModal('edit-subject-modal')">ยกเลิก</button>
+          <button type="submit" class="btn-primary role-btn">บันทึกชื่อวิชา</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- DELETE COLUMN MODAL -->
   <div class="modal-overlay" id="delete-column-modal">
     <div class="modal-box">
@@ -1856,6 +1878,8 @@
           else if (action === "addStudent") runner.addStudentAPI(params.sheetName, params.studentData);
           else if (action === "addStudentsBulk") runner.addStudentsBulkAPI(params.studentsList);
           else if (action === "createSampleData") runner.createSampleDataAPI();
+          else if (action === "saveCustomSubjectName") runner.saveCustomSubjectNameAPI(params.sheetName, params.customName);
+          else if (action === "saveSummaryReport") runner.saveSummaryReportAPI(JSON.parse(params.reportData));
           else reject(new Error("Unknown action: " + action));
         });
       } else {
@@ -4164,43 +4188,53 @@
         if (!defaultVal) defaultVal = sheetName;
       }
 
-      const newVal = prompt(`แก้ไขชื่อรายวิชาสำหรับรายงานการสรุปผลสัมฤทธิ์:\nชีตเดิม: ${sheetName}`, defaultVal);
-      if (newVal !== null) {
-        const trimmed = newVal.trim();
-        showToast("💾 กำลังบันทึกชื่อรายวิชาลงใน Google Sheets...", "info");
-        
-        if (isGAS || getBackendURL()) {
-          callBackendAPI("saveCustomSubjectName", { sheetName: sheetName, customName: trimmed })
-            .then(res => {
-              if (res && res.status === "success") {
-                showToast("✅ บันทึกชื่อวิชาลง Google Sheets สำเร็จ", "success");
-                dbCustomSubjectNames[sheetName] = trimmed;
-                
-                // Backup to SafeStorage
-                let localNames = {};
-                try {
-                  const stored = SafeStorage.getItem("custom_subject_names");
-                  if (stored) localNames = JSON.parse(stored);
-                } catch(e){}
-                if (trimmed) {
-                  localNames[sheetName] = trimmed;
-                } else {
-                  delete localNames[sheetName];
-                }
-                SafeStorage.setItem("custom_subject_names", JSON.stringify(localNames));
-                
-                renderTeacherSummaryReport();
+      // Set input values and labels inside custom modal
+      document.getElementById("edit-subject-sheet-name").value = sheetName;
+      document.getElementById("edit-subject-sheet-label").textContent = `ชีตคะแนนต้นทาง: ${sheetName}`;
+      document.getElementById("edit-subject-display-name").value = defaultVal;
+      
+      openModal("edit-subject-modal");
+    }
+
+    function handleEditSubjectSave(event) {
+      event.preventDefault();
+      const sheetName = document.getElementById("edit-subject-sheet-name").value;
+      const trimmed = document.getElementById("edit-subject-display-name").value.trim();
+      
+      closeModal("edit-subject-modal");
+      showToast("💾 กำลังบันทึกชื่อรายวิชาลงใน Google Sheets...", "info");
+      
+      if (isGAS || getBackendURL()) {
+        callBackendAPI("saveCustomSubjectName", { sheetName: sheetName, customName: trimmed })
+          .then(res => {
+            if (res && res.status === "success") {
+              showToast("✅ บันทึกชื่อวิชาลง Google Sheets สำเร็จ", "success");
+              dbCustomSubjectNames[sheetName] = trimmed;
+              
+              // Backup to SafeStorage
+              let localNames = {};
+              try {
+                const stored = SafeStorage.getItem("custom_subject_names");
+                if (stored) localNames = JSON.parse(stored);
+              } catch(e){}
+              if (trimmed) {
+                localNames[sheetName] = trimmed;
               } else {
-                showToast("❌ บันทึกล้มเหลว: " + res.message, "danger");
+                delete localNames[sheetName];
               }
-            })
-            .catch(err => {
-              showToast("❌ เซิร์ฟเวอร์ล้มเหลว: " + err.message, "danger");
-            });
-        } else {
-          dbCustomSubjectNames[sheetName] = trimmed;
-          renderTeacherSummaryReport();
-        }
+              SafeStorage.setItem("custom_subject_names", JSON.stringify(localNames));
+              
+              renderTeacherSummaryReport();
+            } else {
+              showToast("❌ บันทึกล้มเหลว: " + res.message, "danger");
+            }
+          })
+          .catch(err => {
+            showToast("❌ เซิร์ฟเวอร์ล้มเหลว: " + err.message, "danger");
+          });
+      } else {
+        dbCustomSubjectNames[sheetName] = trimmed;
+        renderTeacherSummaryReport();
       }
     }
 
