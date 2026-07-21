@@ -4520,18 +4520,18 @@
 
       // Build table headers with explicit column widths to prevent overflow
       let headersHtml = `
-        <th style="width: 35px; min-width: 35px;">ลำดับ</th>
-        <th style="width: 75px; min-width: 75px;">รหัสนักเรียน</th>
-        <th style="text-align: left; padding-left: 8px; min-width: 130px;">ชื่อ - นามสกุล</th>
+        <th style="width: 45px; min-width: 45px;">ลำดับ</th>
+        <th style="width: 90px; min-width: 90px;">รหัสนักเรียน</th>
+        <th style="text-align: left; padding-left: 10px; width: 220px; min-width: 180px;">ชื่อ - นามสกุล</th>
       `;
       scoreHeaders.forEach(sh => {
-        headersHtml += `<th style="width: 45px; min-width: 40px; max-width: 60px; font-size: 0.9em; word-break: break-word; line-height: 1.2;">${sh}</th>`;
+        headersHtml += `<th style="min-width: 60px; max-width: 150px; font-size: 0.9em; word-break: break-word; line-height: 1.2;">${sh}</th>`;
       });
       headersHtml += `
-        <th style="width: 55px; min-width: 50px; font-size: 0.95em;">กลางภาค (20)</th>
-        <th style="width: 55px; min-width: 50px; font-size: 0.95em;">ปลายภาค (20)</th>
-        <th style="width: 45px; min-width: 45px;">รวม 100</th>
-        <th style="width: 40px; min-width: 40px;">เกรด</th>
+        <th style="width: 80px; min-width: 70px; font-size: 0.95em;">กลางภาค (20)</th>
+        <th style="width: 80px; min-width: 70px; font-size: 0.95em;">ปลายภาค (20)</th>
+        <th style="width: 70px; min-width: 60px;">รวม 100</th>
+        <th style="width: 60px; min-width: 50px;">เกรด</th>
       `;
 
       // Build table body
