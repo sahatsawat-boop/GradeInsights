@@ -14,11 +14,19 @@ function doGet(e) {
       if (action === "getInitData") {
         result = getInitData();
       } else if (action === "fetchAllGrades") {
-        result = fetchAllGradesAcrossSheetsAPI();
+        if (e.parameter.pin !== getTeacherPIN()) {
+          result = { status: "error", message: "สิทธิ์การเข้าถึงข้อมูลไม่ถูกต้อง" };
+        } else {
+          result = fetchAllGradesAcrossSheetsAPI();
+        }
       } else if (action === "searchStudent") {
         result = searchStudentAcrossSheetsAPI(e.parameter.studentId, e.parameter.classroom);
       } else if (action === "fetchGradesData") {
-        result = fetchGradesData(e.parameter.sheetName);
+        if (e.parameter.pin !== getTeacherPIN()) {
+          result = { status: "error", message: "สิทธิ์การเข้าถึงข้อมูลไม่ถูกต้อง" };
+        } else {
+          result = fetchGradesData(e.parameter.sheetName);
+        }
       } else {
         result = { status: "error", message: "ไม่พบ Action GET ที่ต้องการ" };
       }
@@ -60,7 +68,24 @@ function doPost(e) {
   var result;
   
   try {
-    if (action === "updateScores") {
+    // ตรวจสอบสิทธิ์เข้าถึง (PIN) สำหรับการยิงแก้ไขข้อมูลทุกช่องทาง
+    if (action !== "verifyTeacherPIN") {
+      var clientPin = params.pin || "";
+      if (clientPin !== getTeacherPIN()) {
+        result = { status: "error", message: "สิทธิ์การเข้าถึงข้อมูลไม่ถูกต้อง (รหัสผ่านผิดพลาด)" };
+        return ContentService.createTextOutput(JSON.stringify(result))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    if (action === "verifyTeacherPIN") {
+      var clientPin = params.pin || "";
+      if (clientPin === getTeacherPIN()) {
+        result = { status: "success", message: "ยืนยันรหัสผ่านถูกต้อง" };
+      } else {
+        result = { status: "error", message: "รหัส PIN ไม่ถูกต้อง" };
+      }
+    } else if (action === "updateScores") {
       // แปลงข้อมูลคะแนนเก็บเป็นรูปแบบ Object
       var scoresObj = typeof params.scores === "string" ? JSON.parse(params.scores) : params.scores;
       result = updateScoresAPI(params.sheetName, params.studentId, params.subjectCode, scoresObj);
@@ -161,8 +186,7 @@ function getInitData() {
     return {
       status: "success",
       sheetNames: sheetNames,
-      classrooms: classrooms,
-      teacherPin: getTeacherPIN()
+      classrooms: classrooms
     };
   } catch (err) {
     return {
@@ -228,7 +252,6 @@ function fetchAllGradesAcrossSheetsAPI() {
       classrooms: Object.keys(classroomsSet).sort(),
       sheetHeadersMap: sheetHeadersMap,
       allHeaders: Object.keys(allHeadersSet),
-      teacherPin: getTeacherPIN(),
       customSubjectNames: getCustomSubjectNames()
     };
   } catch (err) {

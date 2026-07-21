@@ -1860,6 +1860,11 @@
     async function callBackendAPI(action, params = {}) {
       const url = getBackendURL();
       
+      // แนบรหัสผ่าน PIN สำหรับคำสั่งที่จำเป็นต้องใช้สิทธิ์ครูอัตโนมัติ
+      if (action !== "getInitData" && action !== "searchStudent" && action !== "verifyTeacherPIN") {
+        params.pin = sessionStorage.getItem("teacher_session_pin") || "";
+      }
+      
       if (isGAS) {
         return new Promise((resolve, reject) => {
           var runner = google.script.run
@@ -1867,19 +1872,20 @@
             .withFailureHandler(err => reject(err));
           
           if (action === "getInitData") runner.getInitData();
-          else if (action === "fetchAllGrades") runner.fetchAllGradesAcrossSheetsAPI();
+          else if (action === "verifyTeacherPIN") runner.verifyTeacherPINAPI(params.pin);
+          else if (action === "fetchAllGrades") runner.fetchAllGradesAcrossSheetsAPI(params.pin);
           else if (action === "searchStudent") runner.searchStudentAcrossSheetsAPI(params.studentId, params.classroom);
-          else if (action === "fetchGradesData") runner.fetchGradesData(params.sheetName);
-          else if (action === "updateScores") runner.updateScoresAPI(params.sheetName, params.studentId, params.subjectCode, params.scores);
-          else if (action === "addColumn") runner.addColumnAPI(params.sheetName, params.columnName);
-          else if (action === "deleteColumn") runner.deleteColumnAPI(params.sheetName, params.columnName);
-          else if (action === "renameColumn") runner.renameColumnAPI(params.sheetName, params.oldColumnName, params.newColumnName);
-          else if (action === "deleteStudent") runner.deleteStudentAPI(params.sheetName, params.studentId, params.subjectCode);
-          else if (action === "addStudent") runner.addStudentAPI(params.sheetName, params.studentData);
-          else if (action === "addStudentsBulk") runner.addStudentsBulkAPI(params.studentsList);
-          else if (action === "createSampleData") runner.createSampleDataAPI();
-          else if (action === "saveCustomSubjectName") runner.saveCustomSubjectNameAPI(params.sheetName, params.customName);
-          else if (action === "saveSummaryReport") runner.saveSummaryReportAPI(JSON.parse(params.reportData));
+          else if (action === "fetchGradesData") runner.fetchGradesData(params.sheetName, params.pin);
+          else if (action === "updateScores") runner.updateScoresAPI(params.sheetName, params.studentId, params.subjectCode, params.scores, params.pin);
+          else if (action === "addColumn") runner.addColumnAPI(params.sheetName, params.columnName, params.pin);
+          else if (action === "deleteColumn") runner.deleteColumnAPI(params.sheetName, params.columnName, params.pin);
+          else if (action === "renameColumn") runner.renameColumnAPI(params.sheetName, params.oldColumnName, params.newColumnName, params.pin);
+          else if (action === "deleteStudent") runner.deleteStudentAPI(params.sheetName, params.studentId, params.subjectCode, params.pin);
+          else if (action === "addStudent") runner.addStudentAPI(params.sheetName, params.studentData, params.pin);
+          else if (action === "addStudentsBulk") runner.addStudentsBulkAPI(params.studentsList, params.pin);
+          else if (action === "createSampleData") runner.createSampleDataAPI(params.pin);
+          else if (action === "saveCustomSubjectName") runner.saveCustomSubjectNameAPI(params.sheetName, params.customName, params.pin);
+          else if (action === "saveSummaryReport") runner.saveSummaryReportAPI(JSON.parse(params.reportData), params.pin);
           else reject(new Error("Unknown action: " + action));
         });
       } else {
@@ -1950,7 +1956,6 @@
     let dbGrades = [];
     let dbSheetNames = ["ม.4/1_คณิตศาสตร์", "ม.5/1_คอมพิวเตอร์"];
     let dbClassrooms = ["ม.4/1", "ม.5/1"];
-    let dbTeacherPin = "1234";
     let activeSheetName = "ม.4/1_คณิตศาสตร์";
     
     // Chart references
@@ -2009,7 +2014,6 @@
             if (res && res.status === "success") {
               dbSheetNames = res.sheetNames || [];
               dbClassrooms = res.classrooms || [];
-              dbTeacherPin = res.teacherPin || "1234";
               
               const notice = document.getElementById("no-data-notice");
               if (dbClassrooms.length === 0) {
@@ -2031,9 +2035,11 @@
                 showToast("✅ เชื่อมต่อฐานข้อมูลสำเร็จ", "success");
               }
               
-              // Auto log in if session exists
-              if (SafeStorage.getItem("is_teacher_logged_in") === "true") {
+              // Auto log in if session exists and PIN is present
+              if (SafeStorage.getItem("is_teacher_logged_in") === "true" && sessionStorage.getItem("teacher_session_pin")) {
                 enterTeacherMode(true);
+              } else {
+                exitTeacherMode();
               }
             } else {
               showToast("⚠️ ไม่สามารถโหลดข้อมูลเริ่มต้นได้ ใช้โหมดออฟไลน์แทน", "warning");
@@ -2070,9 +2076,11 @@
       rebuildLocalDropdowns();
       showToast("ℹ️ ทำงานในโหมดทดสอบแบบออฟไลน์ (Local Mode)", "info");
       
-      // Auto log in if session exists
-      if (SafeStorage.getItem("is_teacher_logged_in") === "true") {
+      // Auto log in if session exists and PIN is present
+      if (SafeStorage.getItem("is_teacher_logged_in") === "true" && sessionStorage.getItem("teacher_session_pin")) {
         enterTeacherMode(true);
+      } else {
+        exitTeacherMode();
       }
     }
 
@@ -2135,7 +2143,6 @@
               dbClassrooms = res.classrooms || [];
               dbAllHeaders = res.allHeaders || [];
               dbSheetHeadersMap = res.sheetHeadersMap || {};
-              dbTeacherPin = res.teacherPin || dbTeacherPin;
               dbCustomSubjectNames = res.customSubjectNames || {};
               
               dbHeaders = dbAllHeaders; // สำหรับการทำงานทั่วไป
@@ -2639,19 +2646,32 @@
     }
 
     function verifyTeacherLogin() {
-      const enteredPIN = document.getElementById("teacher-password").value;
+      const enteredPIN = document.getElementById("teacher-password").value.trim();
       const errorMsg = document.getElementById("login-error-msg");
 
-      if (enteredPIN === dbTeacherPin) {
-        enterTeacherMode();
-      } else {
-        errorMsg.classList.remove("d-none");
-      }
+      showToast("🔑 กำลังตรวจสอบรหัสผ่าน...", "info");
+      
+      callBackendAPI("verifyTeacherPIN", { pin: enteredPIN })
+        .then(res => {
+          if (res && res.status === "success") {
+            sessionStorage.setItem("teacher_session_pin", enteredPIN);
+            errorMsg.classList.add("d-none");
+            enterTeacherMode();
+          } else {
+            errorMsg.classList.remove("d-none");
+            showToast("❌ รหัส PIN ไม่ถูกต้อง", "danger");
+          }
+        })
+        .catch(err => {
+          errorMsg.classList.remove("d-none");
+          showToast("❌ ระบบขัดข้อง: " + err.message, "danger");
+        });
     }
 
     function exitTeacherMode() {
       isTeacherLoggedIn = false;
       SafeStorage.setItem("is_teacher_logged_in", "false");
+      sessionStorage.removeItem("teacher_session_pin"); // ลบ PIN ออกจากหน่วยความจำชั่วคราว
       
       const btn = document.getElementById("role-switch-btn");
       if (btn) {
