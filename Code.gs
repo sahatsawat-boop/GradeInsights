@@ -161,8 +161,8 @@ function getInitData() {
       var sheet = sheets[i];
       var name = sheet.getName();
       
-      // ข้ามชีทตั้งค่า
-      if (name === "Config" || name === "Settings") continue;
+      // ข้ามชีทตั้งค่า และชีทรายงานสรุป
+      if (name === "Config" || name === "Settings" || name === "สรุปผลสัมฤทธิ์") continue;
       sheetNames.push(name);
       
       // สแกนหาห้องเรียนในชีทนี้
@@ -213,7 +213,7 @@ function fetchAllGradesAcrossSheetsAPI() {
       var sheet = sheets[i];
       var name = sheet.getName();
       
-      if (name === "Config" || name === "Settings") continue;
+      if (name === "Config" || name === "Settings" || name === "สรุปผลสัมฤทธิ์") continue;
       sheetNames.push(name);
       
       var data = sheet.getDataRange().getValues();
@@ -280,8 +280,8 @@ function searchStudentAcrossSheetsAPI(studentId, classroom) {
       var sheet = sheets[i];
       var sheetName = sheet.getName();
       
-      // ข้ามชีทตั้งค่า
-      if (sheetName === "Config" || sheetName === "Settings") continue;
+      // ข้ามชีทตั้งค่า และชีทรายงานสรุป
+      if (sheetName === "Config" || sheetName === "Settings" || sheetName === "สรุปผลสัมฤทธิ์") continue;
       
       var data = sheet.getDataRange().getValues();
       if (data.length <= 1) continue; // ชีทว่างหรือมีแต่หัวข้อ
@@ -355,14 +355,13 @@ function fetchGradesData(sheetName) {
     
     var sheetNames = ss.getSheets()
       .map(function(s) { return s.getName(); })
-      .filter(function(name) { return name !== "Config" && name !== "Settings"; });
+      .filter(function(name) { return name !== "Config" && name !== "Settings" && name !== "สรุปผลสัมฤทธิ์"; });
     
     return {
       status: "success",
       headers: headers,
       data: rows,
-      sheetNames: sheetNames,
-      teacherPin: getTeacherPIN()
+      sheetNames: sheetNames
     };
   } catch (err) {
     return {
