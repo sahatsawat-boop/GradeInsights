@@ -1144,6 +1144,15 @@
       color: #000 !important;
     }
 
+    .print-page-wrapper {
+      background: #0f172a;
+      padding: 30px 10px;
+      display: flex;
+      justify-content: center;
+      overflow-x: auto;
+      max-height: 70vh;
+    }
+
     @media print {
       body.printing-gradebook > * {
         display: none !important;
@@ -1157,6 +1166,7 @@
         margin: 0 !important;
         padding: 0 !important;
         background: white !important;
+        overflow: visible !important;
       }
       body.printing-gradebook #print-gradebook-modal .modal-box {
         max-width: 100% !important;
@@ -1167,12 +1177,26 @@
         border: none !important;
         padding: 0 !important;
         margin: 0 !important;
+        overflow: visible !important;
+      }
+      body.printing-gradebook .print-page-wrapper {
+        max-height: none !important;
+        overflow: visible !important;
+        background: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
       }
       body.printing-gradebook .print-page {
         box-shadow: none !important;
         padding: 0 !important;
         margin: 0 !important;
         width: 100% !important;
+        overflow: visible !important;
+      }
+      @page {
+        size: landscape;
+        margin: 1cm;
       }
     }
 
@@ -1737,7 +1761,7 @@
       </div>
 
       <!-- Printable A4 landscape Area -->
-      <div style="background: #0f172a; padding: 30px 10px; display: flex; justify-content: center; overflow-x: auto; max-height: 70vh;">
+      <div class="print-page-wrapper">
         <div id="gradebook-print-page" class="print-page" style="width: 297mm; min-height: 210mm; background: white; color: black; padding: 15mm 15mm; box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.5); box-sizing: border-box; border-radius: 4px;">
           <!-- Dynamic printable content injected here -->
         </div>
@@ -4581,14 +4605,20 @@
       localStorage.setItem("print_term", term);
       localStorage.setItem("print_teacher_name", teacher);
 
-      document.body.classList.add("printing-gradebook");
       window.print();
-      
-      // Delay removal to allow printing dialog to construct
-      setTimeout(() => {
-        document.body.classList.remove("printing-gradebook");
-      }, 1000);
     }
+
+    // ตรวจจับระบบการพิมพ์ของเบราว์เซอร์เพื่อจัดเตรียมหน้ากระดาษอย่างแม่นยำ
+    window.addEventListener("beforeprint", () => {
+      const modal = document.getElementById("print-gradebook-modal");
+      if (modal && modal.classList.contains("active")) {
+        document.body.classList.add("printing-gradebook");
+      }
+    });
+
+    window.addEventListener("afterprint", () => {
+      document.body.classList.remove("printing-gradebook");
+    });
 
     function copyAppsScriptCode() {
       const text = getGASCodeTemplateString();
