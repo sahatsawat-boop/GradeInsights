@@ -1077,6 +1077,101 @@
       background: rgba(255,255,255,0.08) !important;
     }
 
+    /* styles for print gradebook preview modal */
+    .print-page h2 {
+      font-family: 'Sarabun', 'Outfit', 'Inter', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      text-align: center;
+      margin: 0 0 8px 0;
+      color: #000 !important;
+    }
+    .print-page h3 {
+      font-family: 'Sarabun', 'Outfit', 'Inter', sans-serif;
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      margin: 0 0 8px 0;
+      color: #000 !important;
+    }
+    .print-page p.subtitle {
+      font-family: 'Sarabun', 'Outfit', 'Inter', sans-serif;
+      font-size: 13px;
+      text-align: center;
+      margin: 0 0 25px 0;
+      color: #334155 !important;
+      font-weight: 500;
+    }
+    .print-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 35px;
+      font-size: 11px;
+      color: #000 !important;
+    }
+    .print-table th, .print-table td {
+      border: 1px solid #000 !important;
+      padding: 7px 5px;
+      text-align: center;
+      font-family: 'Sarabun', 'Outfit', 'Inter', sans-serif;
+      color: #000 !important;
+    }
+    .print-table th {
+      background-color: #f1f5f9 !important;
+      font-weight: 700;
+    }
+    .print-table td.text-left {
+      text-align: left;
+      padding-left: 10px;
+    }
+    .print-footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 50px;
+      padding: 0 40px;
+      font-size: 13px;
+      font-family: 'Sarabun', 'Outfit', 'Inter', sans-serif;
+      color: #000 !important;
+    }
+    .print-footer-col {
+      text-align: center;
+      width: 45%;
+      line-height: 1.8;
+      color: #000 !important;
+    }
+
+    @media print {
+      body.printing-gradebook > * {
+        display: none !important;
+      }
+      body.printing-gradebook #print-gradebook-modal {
+        display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+      }
+      body.printing-gradebook #print-gradebook-modal .modal-box {
+        max-width: 100% !important;
+        width: 100% !important;
+        background: white !important;
+        color: black !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      body.printing-gradebook .print-page {
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+      }
+    }
+
     .d-none { display: none !important; }
 </style>
 </head>
@@ -1397,6 +1492,7 @@
                   <button class="role-btn btn-secondary" onclick="syncTeacherGrades()" style="border-left: 4px solid var(--success);"><i class="fa-solid fa-arrows-rotate"></i> ซิงค์ข้อมูล</button>
                   <button class="role-btn btn-secondary" style="border-left: 4px solid var(--danger);" onclick="openDeleteColumnModal()"><i class="fa-solid fa-trash-can"></i> ลบคอลัมน์</button>
                   <button class="role-btn btn-secondary" onclick="openAddColumnModal()"><i class="fa-solid fa-plus-circle"></i> เพิ่มคอลัมน์คะแนน</button>
+                  <button class="role-btn btn-primary" onclick="openPrintGradebookPreview()" style="border-left: 4px solid #6366f1; background: #6366f1; color: white;"><i class="fa-solid fa-print"></i> พิมพ์บันทึกคะแนน</button>
                   <button class="role-btn btn-primary" onclick="openAddStudentModal()"><i class="fa-solid fa-user-plus"></i> เพิ่มชื่อนักเรียน</button>
                 </div>
               </div>
@@ -1606,6 +1702,43 @@
         <button class="btn-secondary role-btn" onclick="closeModal('teacher-login-modal')">ยกเลิก</button>
         <button class="btn-primary role-btn" onclick="verifyTeacherLogin()">ยืนยันความปลอดภัย</button>
       </div>
+    </div>
+  </div>
+
+  <!-- PRINT GRADEBOOK PREVIEW MODAL -->
+  <div class="modal-overlay" id="print-gradebook-modal" style="z-index: 10000; overflow-y: auto; padding: 20px 10px;">
+    <div class="modal-box" style="max-width: 1200px; width: 95%; background: #1e293b; color: white; padding: 0; border-radius: 12px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5); border: 1px solid rgba(255,255,255,0.1);">
+      
+      <!-- Modal Header (No-print) -->
+      <div class="modal-header no-print" style="padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(15,23,42,0.6);">
+        <h3 style="margin: 0; font-size: 16px; color: white; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-file-pdf" style="color: #f43f5e;"></i> ตัวอย่างก่อนพิมพ์สมุดบันทึกคะแนน (Print Preview)</h3>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button class="role-btn btn-primary" onclick="triggerGradebookPrint()" style="background: #6366f1; border: none; padding: 8px 16px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; color: white;">
+            <i class="fa-solid fa-print"></i> สั่งพิมพ์ / บันทึก PDF
+          </button>
+          <button class="close-modal-btn" onclick="closeModal('print-gradebook-modal')" style="color: rgba(255,255,255,0.6); background: none; border: none; font-size: 24px; cursor: pointer; padding: 0 5px; line-height: 1;">&times;</button>
+        </div>
+      </div>
+
+      <!-- Print Options Setup (No-print) -->
+      <div class="no-print" style="padding: 15px 20px; background: rgba(30,41,59,0.5); border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; flex-wrap: wrap; gap: 15px;">
+        <div style="flex: 1; min-width: 200px;">
+          <label style="display: block; font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 6px; font-weight: 500;">ภาคเรียนที่ / ปีการศึกษา:</label>
+          <input type="text" id="print-opt-term" value="1/2569" oninput="updatePrintPreviewContent()" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(15,23,42,0.4); color: white; font-size: 13px; outline: none;">
+        </div>
+        <div style="flex: 1; min-width: 250px;">
+          <label style="display: block; font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 6px; font-weight: 500;">ครูผู้สอน:</label>
+          <input type="text" id="print-opt-teacher" value="อาจารย์สมศักดิ์ รักการสอน" oninput="updatePrintPreviewContent()" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(15,23,42,0.4); color: white; font-size: 13px; outline: none;">
+        </div>
+      </div>
+
+      <!-- Printable A4 landscape Area -->
+      <div style="background: #0f172a; padding: 30px 10px; display: flex; justify-content: center; overflow-x: auto; max-height: 70vh;">
+        <div id="gradebook-print-page" class="print-page" style="width: 297mm; min-height: 210mm; background: white; color: black; padding: 15mm 15mm; box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.5); box-sizing: border-box; border-radius: 4px;">
+          <!-- Dynamic printable content injected here -->
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -4288,6 +4421,143 @@
       } else {
         showToast("⚠️ โหมดจำลอง: บันทึกรายงานสรุปสำเร็จ (ไม่ได้เชื่อมต่อ Sheets จริง)", "warning");
       }
+    }
+
+    function openPrintGradebookPreview() {
+      const selectedClassroom = document.getElementById("gradebook-filter-classroom").value;
+      const selectedSubject = document.getElementById("gradebook-filter-subject").value;
+
+      if (selectedClassroom === "all" || selectedSubject === "all") {
+        showToast("⚠️ กรุณาเลือกห้องเรียนและวิชาเฉพาะเจาะจงในตัวกรองก่อนสั่งพิมพ์", "warning");
+        return;
+      }
+
+      // Load saved print details
+      document.getElementById("print-opt-term").value = localStorage.getItem("print_term") || "1/2569";
+      document.getElementById("print-opt-teacher").value = localStorage.getItem("print_teacher_name") || "อาจารย์สมศักดิ์ รักการสอน";
+
+      updatePrintPreviewContent();
+      openModal("print-gradebook-modal");
+    }
+
+    function updatePrintPreviewContent() {
+      const classroom = document.getElementById("gradebook-filter-classroom").value;
+      const subject = document.getElementById("gradebook-filter-subject").value;
+      const term = document.getElementById("print-opt-term").value;
+      const teacher = document.getElementById("print-opt-teacher").value;
+
+      const students = dbGrades.filter(st => st.classroom === classroom && st.subject_code === subject);
+      if (students.length === 0) {
+        document.getElementById("gradebook-print-page").innerHTML = "<div style='text-align:center; padding: 50px; color:#666;'>ไม่พบข้อมูลเกรดที่จะแสดงผลพิมพ์</div>";
+        return;
+      }
+
+      // Sort by student number ascending
+      students.sort((a, b) => {
+        const noA = Number(a.student_no) || 999;
+        const noB = Number(b.student_no) || 999;
+        return noA - noB;
+      });
+
+      const firstStudent = students[0];
+      const sheetName = firstStudent._sheetName;
+      const activeHeaders = dbSheetHeadersMap[sheetName] || dbAllHeaders;
+      const scoreHeaders = getScoreHeaders(activeHeaders);
+      
+      // Resolve custom subject name if any
+      let subjectName = dbCustomSubjectNames[sheetName] || "";
+      if (!subjectName && firstStudent.subject_name) {
+        subjectName = firstStudent.subject_name;
+      }
+      if (!subjectName) subjectName = subject;
+
+      // Build table headers
+      let headersHtml = `
+        <th style="width: 50px;">ลำดับ</th>
+        <th style="width: 100px;">รหัสนักเรียน</th>
+        <th style="text-align: left; padding-left: 10px;">ชื่อ - นามสกุล</th>
+      `;
+      scoreHeaders.forEach(sh => {
+        headersHtml += `<th>${sh}</th>`;
+      });
+      headersHtml += `
+        <th>กลางภาค (20)</th>
+        <th>ปลายภาค (20)</th>
+        <th>รวม 100</th>
+        <th>เกรด</th>
+      `;
+
+      // Build table body
+      let bodyHtml = "";
+      students.forEach((st, idx) => {
+        const calc = calculateScoresAndGrades(st, activeHeaders);
+        
+        let rowHtml = `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${st.student_id}</td>
+            <td class="text-left font-semibold">${st.name}</td>
+        `;
+
+        scoreHeaders.forEach(sh => {
+          rowHtml += `<td>${st[sh] !== undefined && st[sh] !== null && st[sh] !== "" ? st[sh] : "-"}</td>`;
+        });
+
+        rowHtml += `
+            <td>${st.midterm_score !== undefined && st.midterm_score !== null && st.midterm_score !== "" ? st.midterm_score : "-"}</td>
+            <td>${st.final_score !== undefined && st.final_score !== null && st.final_score !== "" ? st.final_score : "-"}</td>
+            <td style="font-weight: bold;">${calc.totalScore}</td>
+            <td style="font-weight: bold; color: #15803d;">${calc.grade}</td>
+          </tr>
+        `;
+        bodyHtml += rowHtml;
+      });
+
+      // Assemble full print page HTML
+      const printPageHtml = `
+        <h2>แบบสรุปผลการเรียนและบันทึกคะแนนรายวิชา</h2>
+        <h3>วิชา ${subjectName} (${subject})</h3>
+        <p class="subtitle">ภาคเรียนที่ ${term} | ระดับชั้น ${classroom} | ครูผู้สอน: ${teacher}</p>
+
+        <table class="print-table">
+          <thead>
+            <tr>${headersHtml}</tr>
+          </thead>
+          <tbody>
+            ${bodyHtml}
+          </tbody>
+        </table>
+
+        <div class="print-footer">
+          <div class="print-footer-col">
+            ลงชื่อ...........................................................ครูผู้สอน<br>
+            (${teacher})<br>
+            วันที่......../......../........
+          </div>
+          <div class="print-footer-col">
+            ลงชื่อ...........................................................นายทะเบียน<br>
+            (...........................................................)<br>
+            วันที่......../......../........
+          </div>
+        </div>
+      `;
+
+      document.getElementById("gradebook-print-page").innerHTML = printPageHtml;
+    }
+
+    function triggerGradebookPrint() {
+      const term = document.getElementById("print-opt-term").value;
+      const teacher = document.getElementById("print-opt-teacher").value;
+      localStorage.setItem("print_term", term);
+      localStorage.setItem("print_teacher_name", teacher);
+
+      document.body.classList.add("printing-gradebook");
+      window.print();
+      
+      // Delay removal to allow printing dialog to construct
+      setTimeout(() => {
+        document.body.classList.remove("printing-gradebook");
+      }, 1000);
     }
 
     function copyAppsScriptCode() {
