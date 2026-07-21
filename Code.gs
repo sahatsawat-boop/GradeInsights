@@ -27,6 +27,13 @@ function doGet(e) {
         } else {
           result = fetchGradesData(e.parameter.sheetName);
         }
+      } else if (action === "verifyTeacherPIN") {
+        var clientPin = e.parameter.pin || "";
+        if (clientPin === getTeacherPIN()) {
+          result = { status: "success", message: "ยืนยันรหัสผ่านถูกต้อง" };
+        } else {
+          result = { status: "error", message: "รหัส PIN ไม่ถูกต้อง" };
+        }
       } else {
         result = { status: "error", message: "ไม่พบ Action GET ที่ต้องการ" };
       }

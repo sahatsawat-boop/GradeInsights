@@ -2056,7 +2056,7 @@
         }
         
         // GET requests (Query Params)
-        if (["getInitData", "fetchAllGrades", "searchStudent", "fetchGradesData"].includes(action)) {
+        if (["getInitData", "fetchAllGrades", "searchStudent", "fetchGradesData", "verifyTeacherPIN"].includes(action)) {
           var queryParams = new URLSearchParams({ action: action, ...params }).toString();
           var fetchUrl = `${url}?${queryParams}&ts=${Date.now()}`;
           var response = await fetch(fetchUrl);
