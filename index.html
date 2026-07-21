@@ -3152,7 +3152,10 @@
 
       // Render header
       const headerRow = document.getElementById("gradebook-table-header");
-      const scoreHeaders = getScoreHeaders(activeHeaders);
+      let scoreHeaders = [];
+      if (selectedSubject !== "all") {
+        scoreHeaders = getScoreHeaders(activeHeaders);
+      }
       
       let headerHtml = `
         <th>รหัสประจำตัว</th>
@@ -3179,7 +3182,7 @@
       body.innerHTML = "";
 
       if (filteredData.length === 0) {
-        body.innerHTML = `<tr><td colspan="${10 + scoreHeaders.length}" style="text-align: center; color: var(--text-muted); padding: 30px;">ไม่มีนักเรียนที่ตรงกับตัวเลือกการกรองข้อมูล</td></tr>`;
+        body.innerHTML = `<tr><td colspan="${11 + scoreHeaders.length}" style="text-align: center; color: var(--text-muted); padding: 30px;">ไม่มีนักเรียนที่ตรงกับตัวเลือกการกรองข้อมูล</td></tr>`;
         return;
       }
 
