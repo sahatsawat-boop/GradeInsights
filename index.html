@@ -4478,20 +4478,36 @@
       }
       if (!subjectName) subjectName = subject;
 
-      // Build table headers
+      // Calculate dynamic font size and padding based on number of columns to fit A4 perfectly
+      const totalCols = 3 + scoreHeaders.length + 4; 
+      let tableFontSize = "11px";
+      let cellPadding = "7px 5px";
+      
+      if (totalCols > 15) {
+        tableFontSize = "8px";
+        cellPadding = "3px 2px";
+      } else if (totalCols > 12) {
+        tableFontSize = "9px";
+        cellPadding = "4px 2px";
+      } else if (totalCols > 9) {
+        tableFontSize = "10px";
+        cellPadding = "5px 3px";
+      }
+
+      // Build table headers with explicit column widths to prevent overflow
       let headersHtml = `
-        <th style="width: 50px;">ลำดับ</th>
-        <th style="width: 100px;">รหัสนักเรียน</th>
-        <th style="text-align: left; padding-left: 10px;">ชื่อ - นามสกุล</th>
+        <th style="width: 35px; min-width: 35px;">ลำดับ</th>
+        <th style="width: 75px; min-width: 75px;">รหัสนักเรียน</th>
+        <th style="text-align: left; padding-left: 8px; min-width: 130px;">ชื่อ - นามสกุล</th>
       `;
       scoreHeaders.forEach(sh => {
-        headersHtml += `<th>${sh}</th>`;
+        headersHtml += `<th style="width: 45px; min-width: 40px; max-width: 60px; font-size: 0.9em; word-break: break-word; line-height: 1.2;">${sh}</th>`;
       });
       headersHtml += `
-        <th>กลางภาค (20)</th>
-        <th>ปลายภาค (20)</th>
-        <th>รวม 100</th>
-        <th>เกรด</th>
+        <th style="width: 55px; min-width: 50px; font-size: 0.95em;">กลางภาค (20)</th>
+        <th style="width: 55px; min-width: 50px; font-size: 0.95em;">ปลายภาค (20)</th>
+        <th style="width: 45px; min-width: 45px;">รวม 100</th>
+        <th style="width: 40px; min-width: 40px;">เกรด</th>
       `;
 
       // Build table body
@@ -4503,7 +4519,7 @@
           <tr>
             <td>${idx + 1}</td>
             <td>${st.student_id}</td>
-            <td class="text-left font-semibold">${st.name}</td>
+            <td class="text-left font-semibold" style="word-break: break-word;">${st.name}</td>
         `;
 
         scoreHeaders.forEach(sh => {
@@ -4520,13 +4536,20 @@
         bodyHtml += rowHtml;
       });
 
-      // Assemble full print page HTML
+      // Assemble full print page HTML (with inline styles to enforce size and cell padding overrides)
       const printPageHtml = `
+        <style>
+          #gradebook-print-page .print-table th, 
+          #gradebook-print-page .print-table td { 
+            padding: ${cellPadding} !important; 
+          }
+        </style>
+
         <h2>แบบสรุปผลการเรียนและบันทึกคะแนนรายวิชา</h2>
         <h3>วิชา ${subjectName} (${subject})</h3>
         <p class="subtitle">ภาคเรียนที่ ${term} | ระดับชั้น ${classroom} | ครูผู้สอน: ${teacher}</p>
 
-        <table class="print-table">
+        <table class="print-table" style="font-size: ${tableFontSize} !important;">
           <thead>
             <tr>${headersHtml}</tr>
           </thead>
