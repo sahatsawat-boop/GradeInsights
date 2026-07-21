@@ -3986,29 +3986,36 @@
           }
         });
 
-        // 3. Count Reading and Character evaluations
+        // 3. Count Reading and Character evaluations based on grade mapping:
+        // 3 = grade 4, 3.5, 3
+        // 2 = grade 2.5, 2, 1.5, 1
+        // 1 = grade 0, ร, มส
         const evalReadingCounts = { "3": 0, "2": 0, "1": 0, "0": 0 };
         const evalCharacterCounts = { "3": 0, "2": 0, "1": 0, "0": 0 };
 
-        // Try to locate evaluation columns
-        const readCol = headers.find(h => h.includes("การอ่าน") || h.toLowerCase().includes("reading") || h.includes("คิดวิเคราะห์"));
-        const charCol = headers.find(h => h.includes("คุณลักษณะ") || h.toLowerCase().includes("behavior") || h.toLowerCase().includes("desirable"));
-
         students.forEach(st => {
-          if (readCol && st[readCol] !== undefined && st[readCol] !== null && st[readCol] !== "") {
-            const val = String(st[readCol]).trim();
-            if (evalReadingCounts.hasOwnProperty(val)) {
-              evalReadingCounts[val]++;
-              grandEvalReadingCounts[val]++;
+          const isR = String(st.midterm_score).trim() === "ร" || String(st.final_score).trim() === "ร";
+          const isMS = String(st.midterm_score).trim() === "มส" || String(st.final_score).trim() === "มส";
+          
+          let evalVal = "1"; // Default for 0, ร, มส
+          
+          if (!isR && !isMS) {
+            const calc = calculateScoresAndGrades(st, headers);
+            const g = Number(calc.grade); // 4, 3.5, 3, 2.5, 2, 1.5, 1, 0
+            if (g >= 3) {
+              evalVal = "3";
+            } else if (g >= 1) {
+              evalVal = "2";
+            } else {
+              evalVal = "1";
             }
           }
-          if (charCol && st[charCol] !== undefined && st[charCol] !== null && st[charCol] !== "") {
-            const val = String(st[charCol]).trim();
-            if (evalCharacterCounts.hasOwnProperty(val)) {
-              evalCharacterCounts[val]++;
-              grandEvalCharacterCounts[val]++;
-            }
-          }
+          
+          evalReadingCounts[evalVal]++;
+          grandEvalReadingCounts[evalVal]++;
+          
+          evalCharacterCounts[evalVal]++;
+          grandEvalCharacterCounts[evalVal]++;
         });
 
         // Add to rows array
@@ -4032,14 +4039,14 @@
           no: index + 1,
           subject: displayName,
           total: totalStudents,
-          r3: readCol ? evalReadingCounts["3"] : "-",
-          r2: readCol ? evalReadingCounts["2"] : "-",
-          r1: readCol ? evalReadingCounts["1"] : "-",
-          r0: readCol ? evalReadingCounts["0"] : "-",
-          c3: charCol ? evalCharacterCounts["3"] : "-",
-          c2: charCol ? evalCharacterCounts["2"] : "-",
-          c1: charCol ? evalCharacterCounts["1"] : "-",
-          c0: charCol ? evalCharacterCounts["0"] : "-",
+          r3: evalReadingCounts["3"],
+          r2: evalReadingCounts["2"],
+          r1: evalReadingCounts["1"],
+          r0: evalReadingCounts["0"],
+          c3: evalCharacterCounts["3"],
+          c2: evalCharacterCounts["2"],
+          c1: evalCharacterCounts["1"],
+          c0: evalCharacterCounts["0"],
           note: ""
         });
 
@@ -4068,14 +4075,14 @@
           <td>${index + 1}</td>
           <td class="text-left"><span class="report-editable-subject" onclick="editReportSubject('${sheetName}')" title="คลิกเพื่อแก้ไขชื่อวิชา">${displayName}</span></td>
           <td>${totalStudents}</td>
-          <td>${readCol ? (evalReadingCounts["3"] || "-") : "ไม่มีข้อมูล"}</td>
-          <td>${readCol ? (evalReadingCounts["2"] || "-") : "ไม่มีข้อมูล"}</td>
-          <td>${readCol ? (evalReadingCounts["1"] || "-") : "ไม่มีข้อมูล"}</td>
-          <td>${readCol ? (evalReadingCounts["0"] || "-") : "ไม่มีข้อมูล"}</td>
-          <td>${charCol ? (evalCharacterCounts["3"] || "-") : "ไม่มีข้อมูล"}</td>
-          <td>${charCol ? (evalCharacterCounts["2"] || "-") : "ไม่มีข้อมูล"}</td>
-          <td>${charCol ? (evalCharacterCounts["1"] || "-") : "ไม่มีข้อมูล"}</td>
-          <td>${charCol ? (evalCharacterCounts["0"] || "-") : "ไม่มีข้อมูล"}</td>
+          <td>${evalReadingCounts["3"] || "-"}</td>
+          <td>${evalReadingCounts["2"] || "-"}</td>
+          <td>${evalReadingCounts["1"] || "-"}</td>
+          <td>${evalReadingCounts["0"] || "-"}</td>
+          <td>${evalCharacterCounts["3"] || "-"}</td>
+          <td>${evalCharacterCounts["2"] || "-"}</td>
+          <td>${evalCharacterCounts["1"] || "-"}</td>
+          <td>${evalCharacterCounts["0"] || "-"}</td>
           <td></td>
         `;
         evalTbody.appendChild(tr2);
