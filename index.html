@@ -2826,24 +2826,37 @@
 
       const localValidPin = String((typeof dbTeacherPin !== "undefined" && dbTeacherPin) ? dbTeacherPin : "1234").trim();
 
-      // Check immediate match against local pin or default '1234'
-      if (enteredPIN === localValidPin || enteredPIN === "1234") {
+      // If matches local pin, enter directly
+      if (enteredPIN === localValidPin) {
         sessionStorage.setItem("teacher_session_pin", enteredPIN);
         if (errorMsg) errorMsg.classList.add("d-none");
         enterTeacherMode();
         return;
       }
 
-      // Fallback API verification for custom PIN configured on Google Sheets
+      // Verify custom PIN configured in Google Sheets Config tab
       showToast("🔑 กำลังตรวจสอบรหัสผ่าน...", "info");
-      callBackendAPI("verifyTeacherPIN", { pin: enteredPIN })
+      callBackendAPI("fetchAllGrades", { pin: enteredPIN })
         .then(res => {
           if (res && res.status === "success") {
             sessionStorage.setItem("teacher_session_pin", enteredPIN);
+            dbTeacherPin = enteredPIN;
             if (errorMsg) errorMsg.classList.add("d-none");
+            
+            // Populate grades data received directly from verification
+            if (res.data) {
+              dbGrades = res.data || [];
+              dbSheetNames = res.sheetNames || [];
+              dbClassrooms = res.classrooms || [];
+              dbAllHeaders = res.allHeaders || [];
+              dbSheetHeadersMap = res.sheetHeadersMap || {};
+              dbCustomSubjectNames = res.customSubjectNames || {};
+              dbHeaders = dbAllHeaders;
+            }
+            
             enterTeacherMode();
           } else {
-            if (enteredPIN === localValidPin || enteredPIN === "1234") {
+            if (enteredPIN === "1234") {
               sessionStorage.setItem("teacher_session_pin", enteredPIN);
               if (errorMsg) errorMsg.classList.add("d-none");
               enterTeacherMode();
@@ -2854,7 +2867,7 @@
           }
         })
         .catch(err => {
-          if (enteredPIN === localValidPin || enteredPIN === "1234") {
+          if (enteredPIN === "1234" || enteredPIN === localValidPin) {
             sessionStorage.setItem("teacher_session_pin", enteredPIN);
             if (errorMsg) errorMsg.classList.add("d-none");
             enterTeacherMode();
