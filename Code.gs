@@ -79,8 +79,9 @@ function doPost(e) {
   try {
     // ตรวจสอบสิทธิ์เข้าถึง (PIN) สำหรับการยิงแก้ไขข้อมูลทุกช่องทาง
     if (action !== "verifyTeacherPIN") {
-      var clientPin = params.pin || "";
-      if (clientPin !== getTeacherPIN()) {
+      var clientPin = String(params.pin || "").trim();
+      var serverPin = String(getTeacherPIN() || "").trim();
+      if (clientPin !== serverPin) {
         result = { status: "error", message: "สิทธิ์การเข้าถึงข้อมูลไม่ถูกต้อง (รหัสผ่านผิดพลาด)" };
         return ContentService.createTextOutput(JSON.stringify(result))
           .setMimeType(ContentService.MimeType.JSON);

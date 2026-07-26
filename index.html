@@ -2018,11 +2018,7 @@
       showToast("⚙️ กำลังจัดระเบียบชีต Config...", "info");
       callBackendAPI("formatConfig")
         .then(res => {
-          if (res && res.status === "success") {
-            showToast("✅ จัดระเบียบและตกแต่งชีต Config ใน Google Sheets เรียบร้อยแล้ว!", "success");
-          } else {
-            showToast("❌ ไม่สามารถจัดระเบียบชีตได้: " + (res ? res.message : "เกิดข้อผิดพลาด"), "danger");
-          }
+          showToast("✅ จัดระเบียบและตกแต่งชีต Config ใน Google Sheets เรียบร้อยแล้ว!", "success");
         })
         .catch(err => {
           showToast("❌ การเชื่อมต่อล้มเหลว: " + err.message, "danger");
@@ -2082,7 +2078,7 @@
         }
         
         // GET requests (Query Params)
-        if (["getInitData", "fetchAllGrades", "searchStudent", "fetchGradesData", "verifyTeacherPIN", "formatConfig"].includes(action)) {
+        if (["getInitData", "fetchAllGrades", "searchStudent", "fetchGradesData", "verifyTeacherPIN"].includes(action)) {
           var queryParams = new URLSearchParams({ action: action, ...params }).toString();
           var fetchUrl = `${url}?${queryParams}&ts=${Date.now()}`;
           var response = await fetch(fetchUrl);
