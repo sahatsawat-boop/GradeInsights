@@ -27,6 +27,8 @@ function doGet(e) {
         } else {
           result = fetchGradesData(e.parameter.sheetName);
         }
+      } else if (action === "formatConfig") {
+        result = formatConfigSheetAPI();
       } else if (action === "verifyTeacherPIN") {
         var clientPin = e.parameter.pin || "";
         if (clientPin === getTeacherPIN()) {
@@ -103,6 +105,9 @@ function doPost(e) {
     } else if (action === "renameColumn") {
       result = renameColumnAPI(params.sheetName, params.oldColumnName, params.newColumnName);
     } else if (action === "deleteStudent") {
+      result = deleteStudentAPI(params.sheetName, params.studentId, params.subjectCode);
+    } else if (action === "formatConfig") {
+      result = formatConfigSheetAPI();
       result = deleteStudentAPI(params.sheetName, params.studentId, params.subjectCode);
     } else if (action === "addStudent") {
       var studentDataObj = typeof params.studentData === "string" ? JSON.parse(params.studentData) : params.studentData;
@@ -630,6 +635,7 @@ function onOpen() {
     SpreadsheetApp.getUi()
       .createMenu('GradeInsights')
       .addItem('🌐 เปิดหน้าต่างระบบดูคะแนน (Web App)', 'openWebAppDialog')
+      .addItem('⚙️ จัดระเบียบชีต Config', 'formatConfigSheetAPI')
       .addItem('📊 สร้างข้อมูลตัวอย่าง (Create Sample Data)', 'createSampleDataAPI')
       .addToUi();
   } catch (e) {
@@ -1016,5 +1022,77 @@ function saveSummaryReportAPI(data) {
     return { status: "success", message: "บันทึกรายงานสรุปผลสัมฤทธิ์ลงในชีตเรียบร้อยแล้ว!" };
   } catch (err) {
     return { status: "error", message: "เกิดข้อผิดพลาดในการบันทึกรายงาน: " + err.message };
+  }
+}
+
+/**
+ * จัดระเบียบและตกแต่งชีต Config ให้เป็นระเบียบ สวยงาม พร้อมใส่คำอธิบาย
+ */
+function formatConfigSheetAPI() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var configSheet = ss.getSheetByName("Config");
+
+    var pinValue = getTeacherPIN();
+    var customSubjectMap = getCustomSubjectNames();
+
+    if (!configSheet) {
+      configSheet = ss.insertSheet("Config");
+    }
+
+    // ล้างข้อมูลและรูปแบบเดิม
+    configSheet.clear();
+
+    // สร้างตารางหัวข้อและข้อมูล
+    var rows = [
+      ["รายการตั้งค่า (Setting Parameter)", "ค่าที่กำหนด (Setting Value)", "คำอธิบาย (Description)"],
+      ["teacherpin", pinValue, "รหัสผ่าน PIN สำหรับเข้าสู่สิทธิ์โหมดคุณครู (สิทธิแก้ไขคะแนนและจัดการตาราง)"]
+    ];
+
+    Object.keys(customSubjectMap).forEach(function(key) {
+      rows.push(["subjectname:" + key, customSubjectMap[key], "ชื่อแสดงผลฉบับปรับแต่งของรายวิชา " + key]);
+    });
+
+    // เขียนข้อมูลลงชีท
+    var range = configSheet.getRange(1, 1, rows.length, 3);
+    range.setValues(rows);
+
+    // 1. ตกแต่งหัวตาราง Row 1
+    var headerRange = configSheet.getRange(1, 1, 1, 3);
+    headerRange.setFontWeight("bold")
+               .setFontSize(11)
+               .setFontFamily("Sarabun")
+               .setBackground("#1e293b")
+               .setFontColor("#ffffff")
+               .setHorizontalAlignment("center")
+               .setVerticalAlignment("middle");
+    configSheet.setRowHeight(1, 38);
+
+    // 2. ข้อมูลแถว A2:C...
+    if (rows.length > 1) {
+      var dataRange = configSheet.getRange(2, 1, rows.length - 1, 3);
+      dataRange.setFontFamily("Sarabun")
+               .setFontSize(10)
+               .setVerticalAlignment("middle");
+
+      // คอลัมน์ B: กำหนดเป็นข้อความธรรมดา (Plain Text) เพื่อถนอมรหัสผ่าน PIN เช่น 001234
+      configSheet.getRange(2, 2, rows.length - 1, 1).setNumberFormat("@").setHorizontalAlignment("center");
+      configSheet.getRange(2, 1, rows.length - 1, 1).setFontWeight("bold").setHorizontalAlignment("left");
+      configSheet.getRange(2, 3, rows.length - 1, 1).setFontColor("#475569").setHorizontalAlignment("left");
+      
+      configSheet.setRowHeights(2, rows.length - 1, 30);
+    }
+
+    // เส้นขอบตาราง
+    range.setBorder(true, true, true, true, true, true, "#cbd5e1", SpreadsheetApp.BorderStyle.SOLID);
+
+    // ปรับความกว้างคอลัมน์
+    configSheet.setColumnWidth(1, 240);
+    configSheet.setColumnWidth(2, 220);
+    configSheet.setColumnWidth(3, 500);
+
+    return { status: "success", message: "จัดระเบียบชีต Config เรียบร้อยแล้ว!" };
+  } catch (err) {
+    return { status: "error", message: "เกิดข้อผิดพลาดในการจัดระเบียบชีต Config: " + err.message };
   }
 }

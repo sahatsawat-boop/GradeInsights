@@ -1586,6 +1586,16 @@
                 <i class="fa-solid fa-floppy-disk"></i> บันทึกการตั้งค่า
               </button>
             </div>
+
+            <div class="card" style="margin-top: 20px;">
+              <h3><i class="fa-solid fa-wand-magic-sparkles"></i> จัดระเบียบชีต Config (Sheet Formatter)</h3>
+              <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                จัดเรียงตารางในแผ่นงาน Config ให้สวยงาม เป็นระเบียบ พร้อมใส่สีหัวตารางและคำอธิบายกำกับแต่ละรายการ
+              </p>
+              <button class="role-btn btn-secondary" onclick="formatConfigSheet()" style="padding: 10px 20px; font-size: 13px; border-radius: 8px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; border-left: 4px solid var(--primary);">
+                <i class="fa-solid fa-table-cells"></i> กดจัดระเบียบชีท Config ใน Google Sheets
+              </button>
+            </div>
           </div>
 
           <!-- ============================================
@@ -2004,6 +2014,21 @@
       return SafeStorage.getItem("backend_web_app_url") || DEFAULT_BACKEND_URL;
     }
 
+    function formatConfigSheet() {
+      showToast("⚙️ กำลังจัดระเบียบชีต Config...", "info");
+      callBackendAPI("formatConfig")
+        .then(res => {
+          if (res && res.status === "success") {
+            showToast("✅ จัดระเบียบและตกแต่งชีต Config ใน Google Sheets เรียบร้อยแล้ว!", "success");
+          } else {
+            showToast("❌ ไม่สามารถจัดระเบียบชีตได้: " + (res ? res.message : "เกิดข้อผิดพลาด"), "danger");
+          }
+        })
+        .catch(err => {
+          showToast("❌ การเชื่อมต่อล้มเหลว: " + err.message, "danger");
+        });
+    }
+
     function saveConnectionSettings() {
       const urlInput = document.getElementById("settings-web-app-url");
       if (urlInput) {
@@ -2034,6 +2059,7 @@
           
           if (action === "getInitData") runner.getInitData();
           else if (action === "verifyTeacherPIN") runner.verifyTeacherPINAPI(params.pin);
+          else if (action === "formatConfig") runner.formatConfigSheetAPI();
           else if (action === "fetchAllGrades") runner.fetchAllGradesAcrossSheetsAPI(params.pin);
           else if (action === "searchStudent") runner.searchStudentAcrossSheetsAPI(params.studentId, params.classroom);
           else if (action === "fetchGradesData") runner.fetchGradesData(params.sheetName, params.pin);
@@ -2056,7 +2082,7 @@
         }
         
         // GET requests (Query Params)
-        if (["getInitData", "fetchAllGrades", "searchStudent", "fetchGradesData", "verifyTeacherPIN"].includes(action)) {
+        if (["getInitData", "fetchAllGrades", "searchStudent", "fetchGradesData", "verifyTeacherPIN", "formatConfig"].includes(action)) {
           var queryParams = new URLSearchParams({ action: action, ...params }).toString();
           var fetchUrl = `${url}?${queryParams}&ts=${Date.now()}`;
           var response = await fetch(fetchUrl);
