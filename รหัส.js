@@ -150,12 +150,18 @@ function getTeacherPIN() {
     
     var data = configSheet.getDataRange().getValues();
     for (var i = 0; i < data.length; i++) {
-      if (data[i][0] && String(data[i][0]).trim().toLowerCase() === "teacherpin") {
-        return String(data[i][1]).trim();
+      var cellA = String(data[i][0] || "").trim().toLowerCase();
+      if (cellA === "teacherpin" || cellA === "pin" || cellA === "teacher_pin") {
+        var val = data[i][1];
+        if (val !== undefined && val !== null && String(val).trim() !== "") {
+          if (typeof val === "number") {
+            return String(Math.round(val));
+          }
+          return String(val).trim();
+        }
       }
     }
   } catch (e) {
-    // ป้องกันข้อผิดพลาด ย้อนกลับไปใช้รหัสเริ่มต้น
   }
   return "1234";
 }
