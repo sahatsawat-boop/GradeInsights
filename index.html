@@ -2110,6 +2110,7 @@
     let activeTheme = "ocean";
     let isDarkMode = false;
     let isTeacherLoggedIn = false;
+    let dbTeacherPin = "1234";
     let activeAlertTab = "red";
     
     // Core Databases
@@ -2823,7 +2824,7 @@
         return;
       }
 
-      const localValidPin = String(dbTeacherPin || "1234").trim();
+      const localValidPin = String((typeof dbTeacherPin !== "undefined" && dbTeacherPin) ? dbTeacherPin : "1234").trim();
 
       // Check immediate match against local pin or default '1234'
       if (enteredPIN === localValidPin || enteredPIN === "1234") {
